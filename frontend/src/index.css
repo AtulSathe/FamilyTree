@@ -1,0 +1,21 @@
+@import '@xyflow/react/dist/style.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --sidebar-width: 220px;
+  --topbar-height: 56px;
+}
+
+body {
+  margin: 0;
+  font-family: Inter, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* React Flow node selection ring colour */
+.react-flow__node.selected .person-card {
+  outline: 2px solid #3b82f6;
+}

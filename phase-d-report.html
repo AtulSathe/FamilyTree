@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase D Report — Backend Tests</title>
+<style>
+  :root {
+    --bg: #f8f9fa; --surface: #fff; --border: #dee2e6;
+    --text: #212529; --muted: #6c757d; --accent: #0d6efd;
+    --success: #198754; --danger: #dc3545; --warning: #fd7e14;
+    --info: #0dcaf0; --code-bg: #f1f3f5; --sidebar-bg: #fff;
+    --sidebar-border: #dee2e6; --timeline-line: #dee2e6;
+    --tag-bg: #e9ecef; --fix-bg: #fff3cd; --fix-border: #ffc107;
+    --pass-bg: #d1e7dd; --pass-text: #0f5132;
+  }
+  [data-theme="dark"] {
+    --bg: #0d1117; --surface: #161b22; --border: #30363d;
+    --text: #e6edf3; --muted: #8b949e; --accent: #58a6ff;
+    --success: #3fb950; --danger: #f85149; --warning: #d29922;
+    --info: #56d364; --code-bg: #1e2530; --sidebar-bg: #161b22;
+    --sidebar-border: #30363d; --timeline-line: #30363d;
+    --tag-bg: #21262d; --fix-bg: #2d2000; --fix-border: #856404;
+    --pass-bg: #0f2919; --pass-text: #3fb950;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+         background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.6; }
+  a { color: var(--accent); text-decoration: none; }
+
+  /* Layout */
+  #shell { display: flex; min-height: 100vh; }
+  #sidebar {
+    width: 260px; min-height: 100vh; background: var(--sidebar-bg);
+    border-right: 1px solid var(--sidebar-border); position: fixed; top: 0; left: 0;
+    overflow-y: auto; padding: 0 0 2rem 0; z-index: 100;
+  }
+  #main { margin-left: 260px; padding: 2rem 2.5rem; max-width: 960px; }
+
+  /* Sidebar */
+  .sidebar-logo { padding: 1.2rem 1.2rem 0.8rem; border-bottom: 1px solid var(--sidebar-border); }
+  .sidebar-logo h2 { font-size: 1rem; font-weight: 700; color: var(--accent); }
+  .sidebar-logo p  { font-size: 0.75rem; color: var(--muted); }
+  .sidebar-section { padding: 0.6rem 1rem 0.2rem; font-size: 0.7rem; font-weight: 600;
+                     text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .sidebar-link {
+    display: block; padding: 0.42rem 1.2rem; font-size: 0.82rem; color: var(--text);
+    border-left: 3px solid transparent; transition: all .15s;
+  }
+  .sidebar-link:hover { background: var(--tag-bg); border-left-color: var(--accent); color: var(--accent); }
+  .sidebar-link.active { border-left-color: var(--accent); color: var(--accent); font-weight: 600; }
+  .sidebar-divider { border: none; border-top: 1px solid var(--sidebar-border); margin: .5rem 1rem; }
+
+  /* Toggle */
+  #theme-toggle {
+    position: fixed; top: 1rem; right: 1.2rem;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.4rem 0.8rem; cursor: pointer; font-size: 0.8rem; color: var(--text); z-index: 200;
+  }
+
+  /* Sections */
+  section { margin-bottom: 2.5rem; scroll-margin-top: 1.5rem; }
+  h1 { font-size: 1.6rem; font-weight: 700; margin-bottom: .4rem; }
+  h2 { font-size: 1.2rem; font-weight: 700; margin: 2rem 0 .8rem; color: var(--text); }
+  h3 { font-size: 1rem; font-weight: 600; margin: 1.2rem 0 .5rem; color: var(--accent); }
+  p  { margin-bottom: .7rem; color: var(--muted); }
+  .subtitle { color: var(--muted); font-size: .9rem; margin-bottom: 1.2rem; }
+
+  /* Card */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.2rem 1.5rem; margin-bottom: 1rem;
+  }
+
+  /* Stats row */
+  .stats { display: flex; gap: 1rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .stat { flex: 1; min-width: 130px; background: var(--surface); border: 1px solid var(--border);
+          border-radius: 10px; padding: 1rem 1.2rem; text-align: center; }
+  .stat-num { font-size: 2rem; font-weight: 800; }
+  .stat-lbl { font-size: .75rem; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+  .green { color: var(--success); }
+  .red   { color: var(--danger); }
+  .blue  { color: var(--accent); }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 2rem; }
+  .timeline::before { content:''; position:absolute; left:.6rem; top:0; bottom:0;
+                       width:2px; background: var(--timeline-line); }
+  .tl-item { position: relative; margin-bottom: 1.2rem; }
+  .tl-dot { position: absolute; left: -1.55rem; top: .35rem;
+             width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--border); background: var(--surface); }
+  .tl-dot.green { background: var(--success); border-color: var(--success); }
+  .tl-dot.red   { background: var(--danger);  border-color: var(--danger);  }
+  .tl-dot.blue  { background: var(--accent);  border-color: var(--accent);  }
+  .tl-dot.orange{ background: var(--warning); border-color: var(--warning); }
+  .tl-time { font-size: .72rem; color: var(--muted); margin-bottom: .15rem; }
+  .tl-title { font-size: .9rem; font-weight: 600; margin-bottom: .25rem; }
+  .tl-body  { font-size: .82rem; color: var(--muted); }
+
+  /* Expandable */
+  details { background: var(--surface); border: 1px solid var(--border);
+            border-radius: 8px; margin-bottom: .6rem; overflow: hidden; }
+  details > summary {
+    padding: .75rem 1rem; cursor: pointer; font-size: .87rem; font-weight: 600;
+    list-style: none; display: flex; justify-content: space-between; align-items: center;
+    user-select: none;
+  }
+  details > summary::-webkit-details-marker { display: none; }
+  details > summary::after { content: '▶'; font-size: .7rem; color: var(--muted); transition: .2s; }
+  details[open] > summary::after { transform: rotate(90deg); }
+  details[open] > summary { border-bottom: 1px solid var(--border); }
+  .details-body { padding: 1rem; }
+
+  /* Code */
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 1rem; overflow-x: auto; font-size: .8rem; line-height: 1.55; margin: .5rem 0;
+  }
+  code { font-family: 'JetBrains Mono','Fira Code','Cascadia Code',monospace; }
+  pre code { color: var(--text); }
+  .inline-code {
+    font-family: monospace; background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 3px; padding: 0 .3rem; font-size: .82em;
+  }
+
+  /* Syntax highlight classes */
+  .kw  { color: #cf222e; } [data-theme="dark"] .kw  { color: #ff7b72; }
+  .ty  { color: #0550ae; } [data-theme="dark"] .ty  { color: #79c0ff; }
+  .st  { color: #0a3069; } [data-theme="dark"] .st  { color: #a5d6ff; }
+  .cm  { color: #6e7781; } [data-theme="dark"] .cm  { color: #8b949e; font-style:italic; }
+  .nm  { color: #953800; } [data-theme="dark"] .nm  { color: #ffa657; }
+  .fn  { color: #8250df; } [data-theme="dark"] .fn  { color: #d2a8ff; }
+  .nu  { color: #0550ae; } [data-theme="dark"] .nu  { color: #79c0ff; }
+
+  /* Tags / badges */
+  .tag { display:inline-block; padding:.2rem .55rem; border-radius:999px; font-size:.72rem;
+         font-weight:600; background: var(--tag-bg); color: var(--muted); margin:.1rem; }
+  .tag.green { background: var(--pass-bg); color: var(--pass-text); }
+  .tag.red   { background: #fce8e6; color: #58151c; }
+  [data-theme="dark"] .tag.red { background: #490202; color: #f8a5a5; }
+  .tag.blue  { background: #dbeafe; color: #1e40af; }
+  [data-theme="dark"] .tag.blue { background: #0c2a4a; color: #93c5fd; }
+  .tag.orange{ background: #fff3e0; color: #7c2d12; }
+  [data-theme="dark"] .tag.orange { background: #3d1c00; color: #fbbf24; }
+
+  /* Fix box */
+  .fix-box { background: var(--fix-bg); border-left: 4px solid var(--fix-border);
+              border-radius: 0 8px 8px 0; padding: .8rem 1rem; margin:.5rem 0; font-size:.84rem; }
+
+  /* Table */
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; margin-top: .5rem; }
+  th, td { padding: .5rem .75rem; border: 1px solid var(--border); text-align: left; }
+  th { background: var(--code-bg); font-weight: 600; }
+  tr:hover td { background: var(--tag-bg); }
+
+  /* Pass/fail table */
+  .pass { color: var(--success); font-weight: 600; }
+  .fail { color: var(--danger);  font-weight: 600; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 768px) {
+    #sidebar { display: none; }
+    #main { margin-left: 0; padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+
+<div id="shell">
+<!-- ═══ SIDEBAR ═══════════════════════════════════════════════════════════ -->
+<nav id="sidebar">
+  <div class="sidebar-logo">
+    <h2>FamilyTree Build</h2>
+    <p>Phase D — Backend Tests</p>
+  </div>
+
+  <div class="sidebar-section">Overview</div>
+  <a class="sidebar-link" href="#summary">Summary &amp; Stats</a>
+  <a class="sidebar-link" href="#test-results">Test Results</a>
+  <hr class="sidebar-divider"/>
+
+  <div class="sidebar-section">Timeline</div>
+  <a class="sidebar-link" href="#timeline">Actions Timeline</a>
+  <hr class="sidebar-divider"/>
+
+  <div class="sidebar-section">Files Created</div>
+  <a class="sidebar-link" href="#helpers">Test Helpers</a>
+  <a class="sidebar-link" href="#person-tests">PersonEndpointTests</a>
+  <a class="sidebar-link" href="#tree-tests">TreeEndpointTests</a>
+  <a class="sidebar-link" href="#auth-tests">AuthorizationTests</a>
+  <a class="sidebar-link" href="#search-tests">SearchEndpointTests</a>
+  <a class="sidebar-link" href="#audit-tests">AuditLogTests</a>
+  <hr class="sidebar-divider"/>
+
+  <div class="sidebar-section">Fixes &amp; Decisions</div>
+  <a class="sidebar-link" href="#bugs">Bugs Fixed</a>
+  <a class="sidebar-link" href="#decisions">Key Decisions</a>
+</nav>
+
+<!-- ═══ MAIN ══════════════════════════════════════════════════════════════ -->
+<main id="main">
+
+<!-- ── SUMMARY ─────────────────────────────────────────────────────────── -->
+<section id="summary">
+  <h1>Phase D — Backend Integration Tests</h1>
+  <p class="subtitle">58 xUnit integration tests across 6 test classes, all green. InMemory EF Core + fake Gremlin stub replace all Azure dependencies.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="stat-num green">58</div><div class="stat-lbl">Tests Passed</div></div>
+    <div class="stat"><div class="stat-num red">0</div><div class="stat-lbl">Tests Failed</div></div>
+    <div class="stat"><div class="stat-num blue">7</div><div class="stat-lbl">Files Created / Modified</div></div>
+    <div class="stat"><div class="stat-num orange">4</div><div class="stat-lbl">Bugs Fixed</div></div>
+  </div>
+
+  <div class="card">
+    <h3>What was built</h3>
+    <p>A complete integration-test suite that spins up the full API in-process via <span class="inline-code">WebApplicationFactory&lt;Program&gt;</span>, replacing Azure SQL with EF Core InMemory and Cosmos DB Gremlin with a no-op stub. Three roles (PowerAdmin, SatheAdmin, CommunityMember) are injected via <span class="inline-code">X-Mock-User-*</span> headers through <span class="inline-code">MockAuthMiddleware</span>.</p>
+    <br/>
+    <div>
+      <span class="tag blue">xUnit 2.9</span>
+      <span class="tag blue">Microsoft.AspNetCore.Mvc.Testing 8</span>
+      <span class="tag blue">EF Core InMemory 8</span>
+      <span class="tag blue">FakeGraphDbContext</span>
+      <span class="tag blue">MockAuthMiddleware</span>
+    </div>
+  </div>
+</section>
+
+<!-- ── TEST RESULTS TABLE ──────────────────────────────────────────────── -->
+<section id="test-results">
+  <h2>Test Results (58 / 58 passed)</h2>
+
+  <details open>
+    <summary><span>HealthCheckTests (1)</span><span class="tag green">1 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>HealthEndpoint_ReturnsOk</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details open>
+    <summary><span>PersonEndpointTests (12)</span><span class="tag green">12 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>GetPerson_ReturnsOk_ForExistingId</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetPerson_ReturnsNotFound_ForUnknownId</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetPersonDetail_ReturnsOk_WithJobsArray</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetPersonDetail_ReturnsNotFound_ForMissingPerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreatePerson_Returns201_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreatePerson_Returns403_ForCommunityMember</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreatePerson_Returns403_WhenFamilyAdminTriesWrongTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>UpdatePerson_Returns200_ForFamilyAdminInAssignedTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>UpdatePerson_Returns403_ForFamilyAdminInWrongTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>DeletePerson_Returns204_ForPowerAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>DeletePerson_Returns403_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>SearchExisting_Returns200_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>SearchExisting_Returns403_ForCommunityMember</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><span>TreeEndpointTests (11)</span><span class="tag green">11 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>ListTrees_ReturnsOk_WithTwoSeededTrees</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>ListTrees_ReturnsOk_ForCommunityMember</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreateTree_Returns201_ForPowerAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreateTree_Returns403_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreateTree_Returns403_ForCommunityMember</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetNode_ReturnsOk_WhenPersonIsInTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetNode_ReturnsNotFound_WhenPersonNotInTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>GetNode_ReturnsOk_ForCommunityMember</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AddRelationship_Returns400_WhenPersonNotInTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AddRelationship_Returns403_WhenFamilyAdminTriesWrongTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AddMember_ReturnsNoContent_ForPowerAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>RemoveMember_Returns403_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><span>AuthorizationTests (17)</span><span class="tag green">17 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>CommunityMember_CanReadPerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CanReadPersonDetail</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CanListTrees</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CannotCreatePerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CannotDeletePerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CannotAccessAdminUsers</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CommunityMember_CannotCreateTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>FamilyAdmin_CanCreatePersonInAssignedTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>FamilyAdmin_CannotCreateNewTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>FamilyAdmin_CannotDeletePerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>FamilyAdmin_CannotAccessAdminEndpoints</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>FamilyAdmin_CannotViewAuditLog</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>PowerAdmin_CanDeletePerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>PowerAdmin_CanCreateTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>PowerAdmin_CanAccessAdminUsers</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>PowerAdmin_CanViewAuditLog</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><span>SearchEndpointTests (8)</span><span class="tag green">8 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>Search_ReturnsOk_ForAllRoles</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_ByName_ReturnsMatchingPerson</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_WithSurnameFilter_ReturnsOnlyThatSurname</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_WithMissingQ_Returns400</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_WithEmptyQ_Returns400</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_WithNoMatches_ReturnsEmptyArray</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_CrossTreePerson_ReturnsOneResultPerTree</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>Search_SurnamesCovered_InResults</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <details>
+    <summary><span>AuditLogTests (9)</span><span class="tag green">9 Pass</span></summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Test</th><th>Result</th></tr>
+        <tr><td>CreatePerson_CreatesAuditLogEntry</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>UpdatePerson_CreatesAuditLogEntry</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>DeletePerson_CreatesAuditLogEntry</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>CreateTree_CreatesAuditLogEntry</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AuditLogEndpoint_RequiresPowerAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AuditLogEndpoint_Returns403_ForFamilyAdmin</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AuditLogEndpoint_ReturnsPaginatedEnvelope</td><td class="pass">✓ Pass</td></tr>
+        <tr><td>AuditLogEndpoint_PageSizeClamped</td><td class="pass">✓ Pass</td></tr>
+      </table>
+    </div>
+  </details>
+</section>
+
+<!-- ── TIMELINE ─────────────────────────────────────────────────────────── -->
+<section id="timeline">
+  <h2>Timeline of Actions</h2>
+  <div class="timeline">
+
+    <div class="tl-item">
+      <div class="tl-dot blue"></div>
+      <div class="tl-time">Step 1</div>
+      <div class="tl-title">Added missing <code>using Xunit;</code> to 5 test files</div>
+      <div class="tl-body">PersonEndpointTests, TreeEndpointTests, AuthorizationTests, SearchEndpointTests, AuditLogTests — all failed to compile because <code>IClassFixture&lt;&gt;</code> and <code>[Fact]</code> live in the <code>Xunit</code> namespace which isn't in the default implicit usings for <code>Microsoft.NET.Sdk</code>.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot blue"></div>
+      <div class="tl-time">Step 2</div>
+      <div class="tl-title">Added missing usings to Helper files</div>
+      <div class="tl-body">
+        <code>HealthCheckTests.cs</code> — added <code>using Xunit;</code><br/>
+        <code>FakeGraphDbContext.cs</code> — added <code>using Microsoft.Extensions.Configuration;</code><br/>
+        <code>FamilyTreeTestFactory.cs</code> — added <code>using Microsoft.AspNetCore.Hosting;</code>, <code>Microsoft.Extensions.Hosting;</code>, <code>Microsoft.Extensions.DependencyInjection;</code>, <code>Microsoft.Extensions.Configuration;</code>
+      </div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot green"></div>
+      <div class="tl-time">Step 3</div>
+      <div class="tl-title">Build succeeded — first run of tests</div>
+      <div class="tl-body">Build went from 7 errors to 0. Ran <code>dotnet test</code> to discover runtime failures.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot red"></div>
+      <div class="tl-time">Step 4 — Bug #1</div>
+      <div class="tl-title">HealthCheckTests failed: SQL connection string not initialized</div>
+      <div class="tl-body"><code>HealthCheckTests</code> used plain <code>WebApplicationFactory&lt;Program&gt;</code>. In the "Development" environment, Program.cs calls <code>MigrateAsync()</code> which tries to connect to SQL Server. No connection string was configured.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot red"></div>
+      <div class="tl-time">Step 4 — Bug #2</div>
+      <div class="tl-title">All FamilyTreeTestFactory tests failed: <code>IDW10106: The 'ClientId' option must be provided</code></div>
+      <div class="tl-body">Despite <code>MockAuthMiddleware</code> being active, <code>AuthenticationMiddleware</code> (Azure AD B2C / JWT Bearer) was also in the pipeline. Root cause: In .NET 8 Minimal API, <code>WebApplication.Build()</code> auto-injects <code>UseAuthentication()</code> and <code>UseAuthorization()</code> whenever <code>AddAuthentication</code> services are present. The timing of <code>FamilyTreeTestFactory.ConfigureAppConfiguration</code> meant <code>USE_MOCK_AUTH=true</code> was not visible during service registration, so <code>AddMicrosoftIdentityWebApiAuthentication</code> was called, registering <code>AddAuthentication</code>, which triggered the auto-inject.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot red"></div>
+      <div class="tl-time">Step 4 — Bug #3</div>
+      <div class="tl-title">FakeGraphDbContext caused Gremlin connection errors</div>
+      <div class="tl-body"><code>FakeGraphDbContext(IConfiguration config) : GraphDbContext(config)</code> still calls the base constructor which creates a <code>GremlinClient</code> and tries to connect to <code>localhost-fake:443</code>. The client is created (and connects) in the constructor, not lazily.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot orange"></div>
+      <div class="tl-time">Step 5 — Fix #1</div>
+      <div class="tl-title">Updated HealthCheckTests to use FamilyTreeTestFactory</div>
+      <div class="tl-body">Changed <code>HealthCheckTests</code> to accept <code>FamilyTreeTestFactory</code> instead of plain <code>WebApplicationFactory&lt;Program&gt;</code>. This gives it InMemory SQL, the "Testing" environment (skips MigrateAsync), and mock auth.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot orange"></div>
+      <div class="tl-time">Step 5 — Fix #2</div>
+      <div class="tl-title">Set USE_MOCK_AUTH env var in FamilyTreeTestFactory constructor</div>
+      <div class="tl-body">Added a constructor to <code>FamilyTreeTestFactory</code> that calls <code>Environment.SetEnvironmentVariable("USE_MOCK_AUTH", "true")</code>. This runs before any host is created, ensuring Program.cs sees the flag during service registration and skips <code>AddMicrosoftIdentityWebApiAuthentication</code>. Without this, .NET 8 auto-injected <code>UseAuthentication()</code> because authentication services were registered.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot orange"></div>
+      <div class="tl-time">Step 5 — Fix #3</div>
+      <div class="tl-title">Added protected no-arg constructor to GraphDbContext</div>
+      <div class="tl-body">Added <code>protected GraphDbContext() { }</code> to allow test subclasses to skip the real <code>GremlinClient</code> creation. Changed <code>_client</code> to nullable. Updated <code>FakeGraphDbContext</code> to call <code>: base()</code> instead of <code>: GraphDbContext(config)</code>.</div>
+    </div>
+
+    <div class="tl-item">
+      <div class="tl-dot green"></div>
+      <div class="tl-time">Step 6</div>
+      <div class="tl-title">All 58 tests pass — 3.28s total runtime</div>
+      <div class="tl-body">Final <code>dotnet test</code> run: <strong>58 Passed, 0 Failed</strong> in 3.28 seconds.</div>
+    </div>
+
+  </div>
+</section>
+
+<!-- ── HELPERS ──────────────────────────────────────────────────────────── -->
+<section id="helpers">
+  <h2>Test Helpers</h2>
+
+  <details>
+    <summary>FamilyTreeTestFactory.cs — custom WebApplicationFactory</summary>
+    <div class="details-body">
+      <p>Replaces SQL Server with EF Core InMemory (unique DB per factory instance), GraphDbContext with FakeGraphDbContext, enforces mock auth, and seeds the InMemory DB manually. Provides three role-specific client factories.</p>
+      <pre><code><span class="kw">public class</span> <span class="ty">FamilyTreeTestFactory</span> : <span class="ty">WebApplicationFactory</span>&lt;<span class="ty">Program</span>&gt;
+{
+    <span class="kw">private readonly string</span> _dbName = <span class="ty">Guid</span>.NewGuid().ToString();
+
+    <span class="kw">public</span> FamilyTreeTestFactory()
+    {
+        <span class="cm">// Set env var before Program.cs reads configuration during service registration.</span>
+        <span class="cm">// Without this, .NET 8 auto-adds UseAuthentication() because</span>
+        <span class="cm">// AddAuthentication services are present from AddMicrosoftIdentityWebApiAuthentication.</span>
+        <span class="ty">Environment</span>.SetEnvironmentVariable(<span class="st">"USE_MOCK_AUTH"</span>, <span class="st">"true"</span>);
+    }
+
+    <span class="kw">protected override void</span> <span class="fn">ConfigureWebHost</span>(<span class="ty">IWebHostBuilder</span> builder)
+    {
+        builder.<span class="fn">UseEnvironment</span>(<span class="st">"Testing"</span>);
+
+        builder.<span class="fn">ConfigureAppConfiguration</span>((_, cfg) =&gt;
+            cfg.<span class="fn">AddInMemoryCollection</span>(<span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="kw">string</span>, <span class="kw">string?</span>&gt;
+            {
+                [<span class="st">"USE_MOCK_AUTH"</span>]              = <span class="st">"true"</span>,
+                [<span class="st">"CosmosDb:GremlinEndpoint"</span>]   = <span class="st">"localhost-fake"</span>,
+                [<span class="st">"CosmosDb:EnableSsl"</span>]         = <span class="st">"false"</span>,
+                [<span class="st">"AzureBlob:ConnectionString"</span>] = <span class="st">"UseDevelopmentStorage=true"</span>,
+                [<span class="st">"AzureBlob:ContainerName"</span>]   = <span class="st">"person-photos"</span>
+            }));
+
+        builder.<span class="fn">ConfigureServices</span>(services =&gt;
+        {
+            <span class="cm">// Replace SQL Server with InMemory</span>
+            <span class="kw">var</span> sqlDesc = services.<span class="fn">Single</span>(d =&gt; d.ServiceType == <span class="kw">typeof</span>(<span class="ty">DbContextOptions</span>&lt;<span class="ty">AppDbContext</span>&gt;));
+            services.<span class="fn">Remove</span>(sqlDesc);
+            services.<span class="fn">AddDbContext</span>&lt;<span class="ty">AppDbContext</span>&gt;(opts =&gt; opts.<span class="fn">UseInMemoryDatabase</span>(_dbName));
+
+            <span class="cm">// Replace Gremlin with no-op stub</span>
+            <span class="kw">var</span> graphDesc = services.<span class="fn">Single</span>(d =&gt; d.ServiceType == <span class="kw">typeof</span>(<span class="ty">GraphDbContext</span>));
+            services.<span class="fn">Remove</span>(graphDesc);
+            services.<span class="fn">AddSingleton</span>&lt;<span class="ty">GraphDbContext</span>, <span class="ty">FakeGraphDbContext</span>&gt;();
+        });
+    }
+
+    <span class="kw">protected override</span> <span class="ty">IHost</span> <span class="fn">CreateHost</span>(<span class="ty">IHostBuilder</span> builder)
+    {
+        <span class="kw">var</span> host = <span class="kw">base</span>.<span class="fn">CreateHost</span>(builder);
+        <span class="kw">using var</span> scope = host.Services.<span class="fn">CreateScope</span>();
+        <span class="kw">var</span> db = scope.ServiceProvider.<span class="fn">GetRequiredService</span>&lt;<span class="ty">AppDbContext</span>&gt;();
+        db.Database.<span class="fn">EnsureCreated</span>();
+        <span class="ty">DataSeeder</span>.<span class="fn">SeedAsync</span>(db).GetAwaiter().GetResult();
+        <span class="kw">return</span> host;
+    }
+
+    <span class="kw">public</span> <span class="ty">HttpClient</span> <span class="fn">AsPowerAdmin</span>()    =&gt; <span class="fn">CreateClientAs</span>(<span class="st">"power_admin"</span>);
+    <span class="kw">public</span> <span class="ty">HttpClient</span> <span class="fn">AsSatheAdmin</span>()    =&gt; <span class="fn">CreateClientAs</span>(<span class="st">"family_admin"</span>);
+    <span class="kw">public</span> <span class="ty">HttpClient</span> <span class="fn">AsCommunityMember</span>() =&gt; <span class="fn">CreateClientAs</span>(<span class="st">"community_member"</span>);
+}</code></pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>FakeGraphDbContext.cs — no-op Gremlin stub</summary>
+    <div class="details-body">
+      <p>Uses the protected no-arg constructor of <code>GraphDbContext</code> to skip the real <code>GremlinClient</code>. All query methods return empty collections.</p>
+      <pre><code><span class="kw">public class</span> <span class="ty">FakeGraphDbContext</span> : <span class="ty">GraphDbContext</span>
+{
+    <span class="kw">public</span> <span class="fn">FakeGraphDbContext</span>(<span class="ty">IConfiguration</span> _) : <span class="kw">base</span>() { }
+
+    <span class="kw">public override</span> <span class="ty">Task</span>&lt;<span class="ty">IReadOnlyCollection</span>&lt;<span class="ty">IDictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;&gt;&gt; <span class="fn">QueryAsync</span>(
+        <span class="kw">string</span> gremlin, <span class="ty">Dictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;? bindings = <span class="kw">null</span>) =&gt;
+        <span class="ty">Task</span>.<span class="fn">FromResult</span>&lt;<span class="ty">IReadOnlyCollection</span>&lt;<span class="ty">IDictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;&gt;&gt;(
+            <span class="ty">Array</span>.Empty&lt;<span class="ty">IDictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;&gt;());
+
+    <span class="kw">public override</span> <span class="ty">Task</span>&lt;T?&gt; <span class="fn">ScalarAsync</span>&lt;T&gt;(
+        <span class="kw">string</span> gremlin, <span class="ty">Dictionary</span>&lt;<span class="kw">string</span>, <span class="kw">object</span>&gt;? bindings = <span class="kw">null</span>)
+        <span class="kw">where</span> T : <span class="kw">default</span> =&gt;
+        <span class="ty">Task</span>.<span class="fn">FromResult</span>&lt;T?&gt;(<span class="kw">default</span>);
+}</code></pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>GraphDbContext.cs modifications — protected no-arg constructor</summary>
+    <div class="details-body">
+      <p>Added a protected no-arg constructor so test subclasses can skip Gremlin client creation. Changed <code>_client</code> to nullable; <code>Dispose</code> is null-safe.</p>
+      <pre><code><span class="kw">public class</span> <span class="ty">GraphDbContext</span> : <span class="ty">IDisposable</span>
+{
+    <span class="kw">private readonly</span> <span class="ty">GremlinClient</span>? _client;
+
+    <span class="cm">/// No-op constructor for test subclasses — skips real Gremlin connection.</span>
+    <span class="kw">protected</span> <span class="fn">GraphDbContext</span>() { }
+
+    <span class="kw">public</span> <span class="fn">GraphDbContext</span>(<span class="ty">IConfiguration</span> config)
+    {
+        <span class="cm">// ... creates GremlinServer + GremlinClient ...</span>
+    }
+
+    <span class="kw">public void</span> <span class="fn">Dispose</span>() =&gt; _client?.<span class="fn">Dispose</span>();
+}</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ── PERSON TESTS ─────────────────────────────────────────────────────── -->
+<section id="person-tests">
+  <h2>PersonEndpointTests.cs</h2>
+
+  <details>
+    <summary>Full test file — 13 tests covering GET / POST / PUT / DELETE / search-existing</summary>
+    <div class="details-body">
+      <pre><code><span class="kw">public class</span> <span class="ty">PersonEndpointTests</span>(<span class="ty">FamilyTreeTestFactory</span> factory)
+    : <span class="ty">IClassFixture</span>&lt;<span class="ty">FamilyTreeTestFactory</span>&gt;
+{
+    <span class="kw">private static readonly</span> <span class="ty">Guid</span> RahulId     = <span class="ty">Guid</span>.<span class="fn">Parse</span>(<span class="st">"20000000-0000-0000-0000-000000000008"</span>);
+    <span class="kw">private static readonly</span> <span class="ty">Guid</span> SatheTreeId = <span class="ty">Guid</span>.<span class="fn">Parse</span>(<span class="st">"10000000-0000-0000-0000-000000000001"</span>);
+    <span class="kw">private static readonly</span> <span class="ty">Guid</span> PanseTreeId  = <span class="ty">Guid</span>.<span class="fn">Parse</span>(<span class="st">"10000000-0000-0000-0000-000000000002"</span>);
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">GetPerson_ReturnsOk_ForExistingId</span>()
+    {
+        <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>().<span class="fn">GetAsync</span>($<span class="st">"/api/v1/persons/{RahulId}"</span>);
+        Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.OK, response.StatusCode);
+        <span class="kw">var</span> body = <span class="kw">await</span> response.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">JsonElement</span>&gt;();
+        Assert.<span class="fn">Equal</span>(<span class="st">"Rahul Sathe"</span>, body.<span class="fn">GetProperty</span>(<span class="st">"fullName"</span>).<span class="fn">GetString</span>());
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">CreatePerson_Returns201_ForFamilyAdmin</span>()
+    {
+        <span class="kw">var</span> payload  = <span class="kw">new</span> <span class="ty">CreatePersonRequest</span>(<span class="st">"Test Person Alpha"</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="st">"Pune"</span>,
+                                                <span class="st">"Jan 2000"</span>, <span class="kw">null</span>, SatheTreeId, <span class="st">"member"</span>);
+        <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsSatheAdmin</span>().<span class="fn">PostAsJsonAsync</span>(<span class="st">"/api/v1/persons"</span>, payload);
+        Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.Created, response.StatusCode);
+    }
+
+    [<span class="ty">Fact</span>]
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">CreatePerson_Returns403_WhenFamilyAdminTriesWrongTree</span>()
+    {
+        <span class="cm">// Sathe admin trying to create in the Panse tree</span>
+        <span class="kw">var</span> payload  = <span class="kw">new</span> <span class="ty">CreatePersonRequest</span>(<span class="st">"New Panse"</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, PanseTreeId);
+        <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsSatheAdmin</span>().<span class="fn">PostAsJsonAsync</span>(<span class="st">"/api/v1/persons"</span>, payload);
+        Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.Forbidden, response.StatusCode);
+    }
+    <span class="cm">// ... 10 more tests ...</span>
+}</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ── TREE TESTS ───────────────────────────────────────────────────────── -->
+<section id="tree-tests">
+  <h2>TreeEndpointTests.cs</h2>
+
+  <details>
+    <summary>Notable tests — GetNode, cross-tree membership, cross-tree relationship block</summary>
+    <div class="details-body">
+      <pre><code>[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">GetNode_ReturnsOk_WhenPersonIsInTree</span>()
+{
+    <span class="cm">// Suresh is in Sathe tree per seed data</span>
+    <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>()
+        .<span class="fn">GetAsync</span>($<span class="st">"/api/v1/trees/{SatheTreeId}/node/{SureshId}?levels=1"</span>);
+    Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.OK, response.StatusCode);
+
+    <span class="kw">var</span> body = <span class="kw">await</span> response.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">JsonElement</span>&gt;();
+    Assert.<span class="fn">Equal</span>(<span class="st">"Suresh Sathe"</span>, body.<span class="fn">GetProperty</span>(<span class="st">"person"</span>)
+        .<span class="fn">GetProperty</span>(<span class="st">"fullName"</span>).<span class="fn">GetString</span>());
+    Assert.<span class="fn">Equal</span>(<span class="ty">JsonValueKind</span>.Array, body.<span class="fn">GetProperty</span>(<span class="st">"relations"</span>).ValueKind);
+}
+
+[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">AddRelationship_Returns400_WhenPersonNotInTree</span>()
+{
+    <span class="cm">// Snehal (Panse) cannot be related to Rahul (Sathe) via Sathe tree endpoint</span>
+    <span class="kw">var</span> payload  = <span class="kw">new</span> <span class="ty">CreateRelationshipRequest</span>(RahulId, SnehalId, <span class="st">"sibling_of"</span>);
+    <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>()
+        .<span class="fn">PostAsJsonAsync</span>($<span class="st">"/api/v1/trees/{SatheTreeId}/relationships"</span>, payload);
+    Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.BadRequest, response.StatusCode);
+}</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ── AUTH TESTS ───────────────────────────────────────────────────────── -->
+<section id="auth-tests">
+  <h2>AuthorizationTests.cs</h2>
+
+  <details>
+    <summary>Authorization matrix — 17 tests across all 3 roles</summary>
+    <div class="details-body">
+      <table>
+        <tr><th>Role</th><th>Action</th><th>Expected</th></tr>
+        <tr><td>CommunityMember</td><td>GET /persons/:id</td><td>200 ✓</td></tr>
+        <tr><td>CommunityMember</td><td>POST /persons</td><td>403 ✓</td></tr>
+        <tr><td>CommunityMember</td><td>DELETE /persons/:id</td><td>403 ✓</td></tr>
+        <tr><td>CommunityMember</td><td>GET /admin/users</td><td>403 ✓</td></tr>
+        <tr><td>CommunityMember</td><td>POST /trees</td><td>403 ✓</td></tr>
+        <tr><td>FamilyAdmin (Sathe)</td><td>POST /persons → SatheTree</td><td>201 ✓</td></tr>
+        <tr><td>FamilyAdmin (Sathe)</td><td>POST /trees</td><td>403 ✓</td></tr>
+        <tr><td>FamilyAdmin (Sathe)</td><td>DELETE /persons/:id</td><td>403 ✓</td></tr>
+        <tr><td>FamilyAdmin (Sathe)</td><td>GET /admin/users</td><td>403 ✓</td></tr>
+        <tr><td>FamilyAdmin (Sathe)</td><td>GET /admin/audit-log</td><td>403 ✓</td></tr>
+        <tr><td>PowerAdmin</td><td>DELETE /persons/:id</td><td>204 ✓</td></tr>
+        <tr><td>PowerAdmin</td><td>POST /trees</td><td>201 ✓</td></tr>
+        <tr><td>PowerAdmin</td><td>GET /admin/users</td><td>200 ✓</td></tr>
+        <tr><td>PowerAdmin</td><td>GET /admin/audit-log</td><td>200 ✓</td></tr>
+      </table>
+    </div>
+  </details>
+</section>
+
+<!-- ── SEARCH TESTS ─────────────────────────────────────────────────────── -->
+<section id="search-tests">
+  <h2>SearchEndpointTests.cs</h2>
+
+  <details>
+    <summary>8 search tests including cross-tree, empty results, missing-q validation</summary>
+    <div class="details-body">
+      <pre><code>[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">Search_CrossTreePerson_ReturnsOneResultPerTree</span>()
+{
+    <span class="cm">// Meena appears in both Sathe and Panse trees — should get 2 results</span>
+    <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>().<span class="fn">GetAsync</span>(<span class="st">"/api/v1/search?q=Meena"</span>);
+    <span class="kw">var</span> results  = <span class="kw">await</span> response.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">JsonElement</span>&gt;();
+    Assert.<span class="fn">True</span>(results.<span class="fn">GetArrayLength</span>() &gt;= <span class="nu">2</span>);
+}
+
+[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">Search_WithMissingQ_Returns400</span>()
+{
+    <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>().<span class="fn">GetAsync</span>(<span class="st">"/api/v1/search"</span>);
+    Assert.<span class="fn">Equal</span>(<span class="ty">HttpStatusCode</span>.BadRequest, response.StatusCode);
+}</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ── AUDIT TESTS ──────────────────────────────────────────────────────── -->
+<section id="audit-tests">
+  <h2>AuditLogTests.cs</h2>
+
+  <details>
+    <summary>9 audit tests — entry creation, role gating, pagination envelope, pageSize clamping</summary>
+    <div class="details-body">
+      <pre><code>[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">CreatePerson_CreatesAuditLogEntry</span>()
+{
+    <span class="kw">var</span> before = <span class="fn">GetAuditCount</span>(<span class="st">"Person"</span>, <span class="st">"CREATE"</span>);
+
+    <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>().<span class="fn">PostAsJsonAsync</span>(<span class="st">"/api/v1/persons"</span>,
+        <span class="kw">new</span> <span class="ty">CreatePersonRequest</span>(<span class="st">"Audit Person A"</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, <span class="kw">null</span>, SatheTreeId));
+
+    <span class="kw">var</span> after = <span class="fn">GetAuditCount</span>(<span class="st">"Person"</span>, <span class="st">"CREATE"</span>);
+    Assert.<span class="fn">True</span>(after &gt; before, <span class="st">"Expected at least one Person CREATE audit entry."</span>);
+}
+
+[<span class="ty">Fact</span>]
+<span class="kw">public async</span> <span class="ty">Task</span> <span class="fn">AuditLogEndpoint_PageSizeClamped</span>()
+{
+    <span class="kw">var</span> response = <span class="kw">await</span> factory.<span class="fn">AsPowerAdmin</span>()
+        .<span class="fn">GetAsync</span>(<span class="st">"/api/v1/admin/audit-log?page=1&amp;pageSize=9999"</span>);
+    <span class="kw">var</span> body     = <span class="kw">await</span> response.Content.<span class="fn">ReadFromJsonAsync</span>&lt;<span class="ty">JsonElement</span>&gt;();
+    <span class="kw">var</span> pageSize = body.<span class="fn">GetProperty</span>(<span class="st">"pageSize"</span>).<span class="fn">GetInt32</span>();
+    Assert.<span class="fn">True</span>(pageSize &lt;= <span class="nu">200</span>);
+}</code></pre>
+    </div>
+  </details>
+</section>
+
+<!-- ── BUGS FIXED ───────────────────────────────────────────────────────── -->
+<section id="bugs">
+  <h2>Bugs Fixed</h2>
+
+  <div class="fix-box">
+    <strong>Bug #1 — Missing <code>using Xunit;</code> in 5 test files + helpers</strong><br/>
+    <em>Root cause:</em> <code>Microsoft.NET.Sdk</code> implicit usings don't include <code>Xunit</code> namespace. xUnit 2.x doesn't add implicit global usings (only xUnit 3.x does).<br/>
+    <em>Fix:</em> Added <code>using Xunit;</code> to all 5 test files and <code>using Microsoft.AspNetCore.Hosting;</code>, <code>using Microsoft.Extensions.Hosting;</code>, <code>using Microsoft.Extensions.DependencyInjection;</code>, <code>using Microsoft.Extensions.Configuration;</code> to helper files.
+  </div>
+
+  <div class="fix-box">
+    <strong>Bug #2 — HealthCheckTests using wrong factory (SQL Server connection error)</strong><br/>
+    <em>Root cause:</em> <code>HealthCheckTests</code> used plain <code>WebApplicationFactory&lt;Program&gt;</code> which runs the "Development" environment and calls <code>MigrateAsync()</code> against SQL Server with no connection string.<br/>
+    <em>Fix:</em> Changed to use <code>FamilyTreeTestFactory</code> (InMemory DB, "Testing" environment, skips migration).
+  </div>
+
+  <div class="fix-box">
+    <strong>Bug #3 — Azure AD B2C auth running in tests (<code>IDW10106: ClientId option must be provided</code>)</strong><br/>
+    <em>Root cause:</em> .NET 8 Minimal API auto-injects <code>UseAuthentication()</code> and <code>UseAuthorization()</code> when <code>AddAuthentication</code> services are registered. <code>FamilyTreeTestFactory.ConfigureAppConfiguration</code> runs after Program.cs already read <code>USE_MOCK_AUTH</code> from config, so <code>AddMicrosoftIdentityWebApiAuthentication</code> was called, registering auth services, which triggered the auto-inject.<br/>
+    <em>Fix:</em> Added <code>Environment.SetEnvironmentVariable("USE_MOCK_AUTH", "true")</code> to <code>FamilyTreeTestFactory</code>'s constructor. This sets the env var before any factory host creation; Program.cs reads it via <code>Environment.GetEnvironmentVariable("USE_MOCK_AUTH")</code> and skips Azure AD B2C.
+  </div>
+
+  <div class="fix-box">
+    <strong>Bug #4 — FakeGraphDbContext tried to connect to Gremlin server</strong><br/>
+    <em>Root cause:</em> <code>FakeGraphDbContext(IConfiguration config) : GraphDbContext(config)</code> called the real base constructor which creates a <code>GremlinClient</code> and attempts a WebSocket connection to <code>localhost-fake:443</code> immediately on construction.<br/>
+    <em>Fix:</em> Added <code>protected GraphDbContext() { }</code> no-op constructor to <code>GraphDbContext</code>. Changed <code>_client</code> to nullable. Changed <code>FakeGraphDbContext</code> to call <code>: base()</code> skipping the real client creation entirely. Updated <code>Dispose()</code> to null-safe <code>_client?.Dispose()</code>.
+  </div>
+</section>
+
+<!-- ── DECISIONS ────────────────────────────────────────────────────────── -->
+<section id="decisions">
+  <h2>Key Decisions &amp; Assumptions</h2>
+
+  <table>
+    <tr><th>Decision</th><th>Reasoning</th></tr>
+    <tr>
+      <td>Environment variable over configuration for <code>USE_MOCK_AUTH</code></td>
+      <td>Configuration additions via <code>ConfigureAppConfiguration</code> have uncertain timing relative to Program.cs service registration in .NET 8 Minimal API. Environment variables are always read first by <code>WebApplicationBuilder</code>. Setting the env var in the factory constructor guarantees it's visible before any host code runs.</td>
+    </tr>
+    <tr>
+      <td>All test classes use <code>FamilyTreeTestFactory</code></td>
+      <td>Even <code>HealthCheckTests</code> now uses <code>FamilyTreeTestFactory</code> — the factory provides InMemory DB + "Testing" environment, which skips <code>MigrateAsync</code> and SQL Server connections. There's no reason to use the plain factory.</td>
+    </tr>
+    <tr>
+      <td>Protected no-arg constructor on <code>GraphDbContext</code></td>
+      <td>Alternative (making <code>GraphDbContext</code> implement an interface) would require changing all service registrations. The protected constructor is a minimal, non-breaking change that enables test subclassing.</td>
+    </tr>
+    <tr>
+      <td>Unique InMemory DB name per factory instance (<code>Guid.NewGuid().ToString()</code>)</td>
+      <td>Each <code>IClassFixture&lt;FamilyTreeTestFactory&gt;</code> creates its own factory. Unique DB names prevent cross-test-class contamination (e.g., persons created in <code>AuditLogTests</code> don't appear in <code>PersonEndpointTests</code>).</td>
+    </tr>
+    <tr>
+      <td>DataSeeder called in <code>CreateHost</code>, not <code>ConfigureServices</code></td>
+      <td><code>ConfigureServices</code> runs before the host is built; the <code>AppDbContext</code> isn't yet resolvable. <code>CreateHost</code> override runs after the host is fully built, where scoped services can be resolved normally.</td>
+    </tr>
+    <tr>
+      <td>AuditLog tests check row count before/after mutation</td>
+      <td>The InMemory DB is shared within a test class fixture. Checking the count delta (after &gt; before) rather than an absolute count handles rows already seeded or created by earlier tests in the same class.</td>
+    </tr>
+  </table>
+</section>
+
+</main>
+</div>
+
+<script>
+  // Theme toggle
+  function toggleTheme() {
+    const html = document.documentElement;
+    const btn  = document.getElementById('theme-toggle');
+    if (html.dataset.theme === 'dark') {
+      html.removeAttribute('data-theme');
+      btn.textContent = '🌙 Dark';
+    } else {
+      html.dataset.theme = 'dark';
+      btn.textContent = '☀️ Light';
+    }
+  }
+
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links    = document.querySelectorAll('.sidebar-link');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`.sidebar-link[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-10% 0px -85% 0px' });
+  sections.forEach(s => obs.observe(s));
+
+  // Smooth scroll
+  links.forEach(l => l.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelector(l.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth' });
+  }));
+</script>
+</body>
+</html>

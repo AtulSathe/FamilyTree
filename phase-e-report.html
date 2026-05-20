@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phase E — Frontend Scaffold · FamilyTree Build Report</title>
+<style>
+  :root {
+    --bg: #f8fafc; --surface: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --accent: #2563eb;
+    --accent-light: #dbeafe; --green: #16a34a; --green-light: #dcfce7;
+    --amber: #d97706; --amber-light: #fef3c7; --red: #dc2626; --red-light: #fee2e2;
+    --purple: #7c3aed; --purple-light: #ede9fe;
+    --sidebar-w: 260px;
+  }
+  [data-theme="dark"] {
+    --bg: #0f172a; --surface: #1e293b; --border: #334155;
+    --text: #e2e8f0; --muted: #94a3b8; --accent: #60a5fa;
+    --accent-light: #1e3a5f; --green: #4ade80; --green-light: #14532d;
+    --amber: #fbbf24; --amber-light: #451a03; --red: #f87171; --red-light: #450a0a;
+    --purple: #a78bfa; --purple-light: #2e1065;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+
+  /* ── Sidebar ── */
+  #sidebar {
+    width: var(--sidebar-w); min-height: 100vh; background: var(--surface);
+    border-right: 1px solid var(--border); position: fixed; top: 0; left: 0;
+    overflow-y: auto; padding: 1rem 0; z-index: 100;
+    transition: transform .25s ease;
+  }
+  #sidebar .logo { padding: .5rem 1.25rem 1rem; font-size: 1rem; font-weight: 700;
+    color: var(--accent); display: flex; align-items: center; gap: .5rem; }
+  #sidebar .phase-badge { font-size: .65rem; background: var(--accent); color: #fff;
+    padding: .15rem .4rem; border-radius: 999px; }
+  #sidebar nav a { display: block; padding: .45rem 1.25rem; font-size: .82rem;
+    color: var(--muted); text-decoration: none; border-left: 3px solid transparent;
+    transition: all .15s; }
+  #sidebar nav a:hover, #sidebar nav a.active {
+    color: var(--accent); border-left-color: var(--accent); background: var(--accent-light); }
+  #sidebar .section-label { padding: .8rem 1.25rem .2rem; font-size: .68rem;
+    font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+
+  /* ── Main ── */
+  #main { margin-left: var(--sidebar-w); flex: 1; padding: 2rem; max-width: 1100px; }
+
+  /* ── Top bar ── */
+  #topbar { position: sticky; top: 0; background: var(--bg); z-index: 50;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: .75rem 0 .75rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  #topbar h1 { font-size: 1.3rem; font-weight: 700; }
+  #topbar .meta { font-size: .78rem; color: var(--muted); }
+  #theme-toggle { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: .35rem .75rem; cursor: pointer; font-size: .8rem;
+    color: var(--text); display: flex; align-items: center; gap: .4rem; }
+
+  /* ── Summary cards ── */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr));
+    gap: 1rem; margin-bottom: 2rem; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1rem 1.25rem; }
+  .stat-card .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .stat-card .label { font-size: .78rem; color: var(--muted); margin-top: .2rem; }
+
+  /* ── Section headings ── */
+  h2 { font-size: 1.1rem; font-weight: 700; margin: 2rem 0 1rem;
+    padding-bottom: .4rem; border-bottom: 2px solid var(--accent); color: var(--text); }
+  h3 { font-size: .95rem; font-weight: 600; margin: 1.25rem 0 .6rem; color: var(--text); }
+
+  /* ── Timeline ── */
+  .timeline { position: relative; padding-left: 1.5rem; }
+  .timeline::before { content: ''; position: absolute; left: .35rem; top: 0; bottom: 0;
+    width: 2px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 1.25rem; }
+  .tl-item::before { content: ''; position: absolute; left: -1.28rem; top: .35rem;
+    width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .tl-item .tl-time { font-size: .72rem; color: var(--muted); margin-bottom: .15rem; }
+  .tl-item .tl-title { font-size: .88rem; font-weight: 600; }
+  .tl-item .tl-desc { font-size: .82rem; color: var(--muted); margin-top: .2rem; }
+  .tl-item.success::before { background: var(--green); }
+  .tl-item.warn::before   { background: var(--amber); }
+  .tl-item.error::before  { background: var(--red); }
+
+  /* ── Expandable ── */
+  details { border: 1px solid var(--border); border-radius: 10px;
+    margin-bottom: .75rem; overflow: hidden; }
+  summary { padding: .75rem 1rem; cursor: pointer; font-weight: 600; font-size: .88rem;
+    background: var(--surface); display: flex; justify-content: space-between;
+    align-items: center; list-style: none; user-select: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::after { content: '▸'; font-size: .7rem; color: var(--muted); transition: transform .2s; }
+  details[open] > summary::after { transform: rotate(90deg); }
+  details[open] > summary { border-bottom: 1px solid var(--border); }
+  .details-body { padding: 1rem; background: var(--bg); }
+
+  /* ── Code blocks ── */
+  pre { background: #0f172a; color: #e2e8f0; border-radius: 8px;
+    padding: 1rem; overflow-x: auto; font-size: .78rem; line-height: 1.6;
+    margin: .5rem 0; }
+  [data-theme="dark"] pre { background: #020617; border: 1px solid #1e293b; }
+  code.inline { background: var(--accent-light); color: var(--accent);
+    padding: .1em .35em; border-radius: 4px; font-size: .82em; font-family: monospace; }
+
+  /* ── File table ── */
+  .file-table { width: 100%; border-collapse: collapse; font-size: .82rem; }
+  .file-table th { background: var(--surface); border: 1px solid var(--border);
+    padding: .45rem .75rem; text-align: left; font-weight: 600; font-size: .75rem;
+    text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+  .file-table td { border: 1px solid var(--border); padding: .4rem .75rem;
+    vertical-align: top; }
+  .file-table tr:nth-child(even) td { background: var(--bg); }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: .15rem .55rem; border-radius: 999px;
+    font-size: .72rem; font-weight: 600; }
+  .badge.new    { background: var(--green-light); color: var(--green); }
+  .badge.mod    { background: var(--amber-light); color: var(--amber); }
+  .badge.fix    { background: var(--red-light); color: var(--red); }
+  .badge.infra  { background: var(--purple-light); color: var(--purple); }
+
+  /* ── Verification checklist ── */
+  .check-list { list-style: none; }
+  .check-list li { padding: .35rem 0; font-size: .85rem; display: flex; align-items: flex-start; gap: .5rem; }
+  .check-list li::before { content: '✓'; color: var(--green); font-weight: 700; flex-shrink: 0; }
+  .check-list li.warn::before { content: '⚠'; color: var(--amber); }
+
+  /* ── Alert box ── */
+  .alert { border-radius: 8px; padding: .75rem 1rem; font-size: .83rem; margin: .75rem 0; }
+  .alert.info  { background: var(--accent-light); border-left: 4px solid var(--accent); }
+  .alert.ok    { background: var(--green-light);  border-left: 4px solid var(--green); }
+  .alert.warn  { background: var(--amber-light);  border-left: 4px solid var(--amber); }
+
+  /* ── Responsive ── */
+  @media (max-width: 768px) {
+    #sidebar { transform: translateX(-100%); }
+    #sidebar.open { transform: translateX(0); }
+    #main { margin-left: 0; padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── Sidebar ── -->
+<nav id="sidebar">
+  <div class="logo">🌳 FamilyTree <span class="phase-badge">Phase E</span></div>
+  <div class="section-label">Overview</div>
+  <nav>
+    <a href="#summary">Summary</a>
+    <a href="#timeline">Timeline of Actions</a>
+  </nav>
+  <div class="section-label">Files Created</div>
+  <nav>
+    <a href="#config-files">Config &amp; Setup</a>
+    <a href="#types">Types</a>
+    <a href="#api">API Client</a>
+    <a href="#store">Store (Zustand)</a>
+    <a href="#hooks">Hooks</a>
+    <a href="#i18n">i18n (3 langs)</a>
+    <a href="#mocks">MSW Mocks</a>
+    <a href="#common">Components — Common</a>
+    <a href="#layout">Components — Layout</a>
+    <a href="#search">Components — Search</a>
+    <a href="#tree">Components — Tree Canvas</a>
+    <a href="#person">Components — Person</a>
+    <a href="#surname">Components — Surname</a>
+    <a href="#pages">Pages</a>
+  </nav>
+  <div class="section-label">Decisions &amp; Fixes</div>
+  <nav>
+    <a href="#decisions">Design Decisions</a>
+    <a href="#fixes">Fixes Applied</a>
+    <a href="#verify">Verification</a>
+  </nav>
+</nav>
+
+<!-- ── Main ── -->
+<main id="main">
+
+  <!-- Top bar -->
+  <div id="topbar">
+    <div>
+      <h1>Phase E — Frontend Scaffold</h1>
+      <div class="meta">FamilyTree · React 18 + TypeScript + Vite · 2026-05-20</div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+  </div>
+
+  <!-- Summary -->
+  <section id="summary">
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="num">42</div>
+        <div class="label">Files Created / Modified</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">20</div>
+        <div class="label">React Components</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">3</div>
+        <div class="label">Languages (EN / HI / MR)</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">0</div>
+        <div class="label">TypeScript Errors</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">585</div>
+        <div class="label">Modules Bundled</div>
+      </div>
+      <div class="stat-card">
+        <div class="num">383ms</div>
+        <div class="label">Vite Dev Start Time</div>
+      </div>
+    </div>
+
+    <div class="alert ok">
+      <strong>Build Status:</strong> Clean — <code class="inline">tsc --noEmit</code> passes with 0 errors.
+      <code class="inline">vite build</code> produces 585 modules in 2.35 s. Dev server starts in 383 ms.
+    </div>
+
+    <div class="alert info">
+      <strong>To run in MSW mode (no backend needed):</strong><br/>
+      <code class="inline">cd frontend &amp;&amp; npx msw init public/ --save &amp;&amp; VITE_USE_MOCK=true npm run dev</code><br/>
+      Then open <code class="inline">http://localhost:5173</code>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <h2 id="timeline">Timeline of Actions</h2>
+  <div class="timeline">
+    <div class="tl-item success">
+      <div class="tl-time">Step 1</div>
+      <div class="tl-title">Project configuration files</div>
+      <div class="tl-desc">Created package.json, tsconfig.json, vite.config.ts, tailwind.config.ts, postcss.config.js, index.html, .env.example</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 2</div>
+      <div class="tl-title">TypeScript types (src/types/)</div>
+      <div class="tl-desc">person.ts, tree.ts, surname.ts, auth.ts, search.ts — all strict interfaces matching API DTOs</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 3</div>
+      <div class="tl-title">API client layer (src/api/)</div>
+      <div class="tl-desc">client.ts (axios), persons.ts, trees.ts, surnames.ts, search.ts — all typed with react-query hooks</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 4</div>
+      <div class="tl-title">Zustand stores (src/store/)</div>
+      <div class="tl-desc">treeStore.ts — controlled React Flow with applyNodeChanges/applyEdgeChanges, buildLayout algorithm. authStore.ts — mock user + useAuth helper.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 5</div>
+      <div class="tl-title">Custom hooks (src/hooks/)</div>
+      <div class="tl-desc">useTreeData.ts, usePersonSearch.ts (debounced 350 ms), useAuth.ts (re-export from store)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 6</div>
+      <div class="tl-title">i18n setup — 12 JSON files</div>
+      <div class="tl-desc">i18next init with EN/HI/MR languages; 4 namespaces each (common, tree, person, admin); localStorage language preference</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 7</div>
+      <div class="tl-title">MSW mock handlers</div>
+      <div class="tl-desc">browser.ts + handlers.ts covering all API endpoints with 17 seeded persons, 2 trees, surname links, search — matching API contract (flat arrays, RelationDto[] for tree nodes)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 8</div>
+      <div class="tl-title">Common components</div>
+      <div class="tl-desc">Avatar.tsx, Button.tsx, Modal.tsx (portal + Escape key), Badge.tsx (auto-coloured by relationship/role type)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 9</div>
+      <div class="tl-title">Layout components</div>
+      <div class="tl-desc">AppShell.tsx (fixed height shell), TopBar.tsx (logo + search + lang switcher + user chip), LeftPane.tsx (surnames list + relationships link)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 10</div>
+      <div class="tl-title">Search components</div>
+      <div class="tl-desc">SearchBar.tsx (debounced input + dropdown) + SearchResults.tsx (avatar + name + surname badge, onMouseDown to avoid blur race)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 11</div>
+      <div class="tl-title">Tree canvas components</div>
+      <div class="tl-desc">TreeCanvas.tsx (ReactFlow with minimap + controls + dot background), PersonNode.tsx (Avatar + name + expand + dbl-click navigate), EdgeTypes.ts</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 12</div>
+      <div class="tl-title">Person components</div>
+      <div class="tl-desc">PersonCard.tsx (compact), PersonDetail.tsx (full with jobs timeline + role-gated edit), PersonForm.tsx (create/update with tree selector)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 13</div>
+      <div class="tl-title">Surname components</div>
+      <div class="tl-desc">SurnamePanel.tsx (left-pane item with member count), SurnameRelationships.tsx (table with badge + person link + hops)</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 14</div>
+      <div class="tl-title">Pages</div>
+      <div class="tl-desc">TreePage.tsx, PersonDetailPage.tsx (with edit modal), SurnameRelationshipsPage.tsx</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 15</div>
+      <div class="tl-title">Entry point + routing</div>
+      <div class="tl-desc">main.tsx (MSW conditional init → QueryClientProvider → App), App.tsx (BrowserRouter with 3 routes)</div>
+    </div>
+    <div class="tl-item warn">
+      <div class="tl-time">Fix 1</div>
+      <div class="tl-title">tsconfig missing vite/client types</div>
+      <div class="tl-desc">Added "types": ["vite/client"] — resolves TS2339 on import.meta.env in client.ts and main.tsx</div>
+    </div>
+    <div class="tl-item warn">
+      <div class="tl-time">Fix 2</div>
+      <div class="tl-title">Missing i18n keys</div>
+      <div class="tl-desc">Added surnames, surnameRelationships to common.json; added née, edit, save, create, cancel, birthMonthYear, deathMonthYear, tree, customFields to person.json — all 3 languages updated</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Verify</div>
+      <div class="tl-title">npm install + tsc + vite build + dev server</div>
+      <div class="tl-desc">0 TypeScript errors, 585 modules bundled cleanly, dev server starts in 383 ms</div>
+    </div>
+  </div>
+
+  <!-- Config Files -->
+  <h2 id="config-files">Config &amp; Setup Files</h2>
+
+  <details>
+    <summary>package.json — Dependencies &amp; scripts <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">React 18, @xyflow/react v12, @tanstack/react-query v5, Zustand v5, MSW v2, i18next, axios, TailwindCSS v3, Vite 6, Vitest</p>
+      <pre>{
+  "name": "family-tree",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.62.0",
+    "@xyflow/react": "^12.3.6",
+    "axios": "^1.7.9",
+    "i18next": "^24.0.2",
+    "msw": "^2.6.6",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-i18next": "^15.1.3",
+    "react-router-dom": "^6.27.0",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^16.1.0",
+    "@types/react": "^18.3.14",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.16",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.3",
+    "vitest": "^2.1.6"
+  }
+}</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>vite.config.ts — Proxy + path alias <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>import { defineConfig } from 'vite'
+import react from '@vitejs/plugin-react'
+import { resolve } from 'path'
+
+export default defineConfig({
+  plugins: [react()],
+  resolve: { alias: { '@': resolve(__dirname, 'src') } },
+  server: {
+    proxy: {
+      '/api': { target: 'https://localhost:7001', changeOrigin: true, secure: false }
+    },
+  },
+})</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>tsconfig.json — Strict mode + vite/client types <span class="badge mod">MODIFIED</span></summary>
+    <div class="details-body">
+      <div class="alert warn">Added <code class="inline">"types": ["vite/client"]</code> to resolve <code class="inline">import.meta.env</code> TypeScript errors.</div>
+      <pre>{
+  "compilerOptions": {
+    "target": "ES2020",
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "paths": { "@/*": ["./src/*"] },
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>src/main.tsx — Entry point with MSW conditional init <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import App from './App'
+import './i18n/index'
+import './index.css'
+
+const qc = new QueryClient()
+
+async function enableMocking() {
+  if (import.meta.env.VITE_USE_MOCK !== 'true') return
+  const { worker } = await import('./mocks/browser')
+  return worker.start({ onUnhandledRequest: 'bypass' })
+}
+
+enableMocking().then(() =>
+  createRoot(document.getElementById('root')!).render(
+    &lt;StrictMode&gt;
+      &lt;QueryClientProvider client={qc}&gt;
+        &lt;App /&gt;
+      &lt;/QueryClientProvider&gt;
+    &lt;/StrictMode&gt;,
+  ),
+)</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>src/App.tsx — BrowserRouter with 3 routes <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import TreePage from './pages/TreePage'
+import PersonDetailPage from './pages/PersonDetailPage'
+import SurnameRelationshipsPage from './pages/SurnameRelationshipsPage'
+
+export default function App() {
+  return (
+    &lt;BrowserRouter&gt;
+      &lt;Routes&gt;
+        &lt;Route path="/" element={&lt;TreePage /&gt;} /&gt;
+        &lt;Route path="/person/:id" element={&lt;PersonDetailPage /&gt;} /&gt;
+        &lt;Route path="/surnames" element={&lt;SurnameRelationshipsPage /&gt;} /&gt;
+      &lt;/Routes&gt;
+    &lt;/BrowserRouter&gt;
+  )
+}</pre>
+    </div>
+  </details>
+
+  <!-- Types -->
+  <h2 id="types">Types (src/types/)</h2>
+
+  <details>
+    <summary>All 5 type files <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h3>person.ts</h3>
+      <pre>export interface Person {
+  id: string; fullName: string; nameBefore: string | null
+  phone: string | null; location: string | null
+  birthMonthYear: string | null; deathMonthYear: string | null
+  photoBlobUrl: string | null; primaryTreeId: string | null
+}
+export interface Job {
+  title: string | null; company: string | null
+  startMMYYYY: string | null; endMMYYYY: string | null
+}
+export interface PersonDetail extends Person {
+  hobbies: string | null; education: string | null; skills: string | null
+  jobs: Job[]; customFields: Record&lt;string, unknown&gt; | null
+}
+export interface CreatePersonPayload { fullName: string; treeId: string; ... }
+export interface UpdatePersonPayload { fullName?: string; ... }</pre>
+
+      <h3>tree.ts</h3>
+      <pre>export interface FamilyTree { id: string; surname: string; description: string | null; memberCount: number }
+export interface RelationDto {
+  personId: string; fullName: string; photoBlobUrl: string | null
+  relationshipType: string; direction: 'in' | 'out' | 'both'
+}
+export interface TreeNode { person: Person; relations: RelationDto[] }</pre>
+
+      <h3>surname.ts</h3>
+      <pre>export interface SurnameInfo { surname: string; treeId: string; memberCount: number; recentPerson?: Person }
+export interface SurnameLink { surnameA: string; surnameB: string; relationshipLevel: number; linkPerson: Person; detectedAt: string }</pre>
+    </div>
+  </details>
+
+  <!-- API -->
+  <h2 id="api">API Client (src/api/)</h2>
+
+  <details>
+    <summary>client.ts — axios instance with base URL injection <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>import axios from 'axios'
+const BASE = import.meta.env.VITE_API_BASE_URL ?? '/api/v1'
+export const api = axios.create({ baseURL: BASE })</pre>
+      <p style="font-size:.82rem;color:var(--muted);margin-top:.5rem">In full-stack mode, VITE_API_BASE_URL = https://localhost:7001/api/v1. In MSW mode, /api/v1 is intercepted by the service worker before hitting the Vite proxy.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>persons.ts, trees.ts, surnames.ts, search.ts — react-query hooks <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h3>Key hooks</h3>
+      <pre>// persons.ts
+usePerson(id)           → GET /persons/:id
+usePersonDetail(id)     → GET /persons/:id/detail
+useCreatePerson()       → POST /persons
+useUpdatePerson(id)     → PUT /persons/:id
+useSearchExisting(q)    → GET /persons/search-existing?q=
+
+// trees.ts
+useTrees()                               → GET /trees
+useCreateTree()                          → POST /trees
+useAddRelationship(treeId)               → POST /trees/:treeId/relationships
+
+// surnames.ts
+useSurnames()       → GET /surnames
+useSurnameLinks()   → GET /surnames/relationships
+
+// search.ts
+useSearch(q, surname)   → GET /search?q=&surname=</pre>
+    </div>
+  </details>
+
+  <!-- Store -->
+  <h2 id="store">Zustand Stores (src/store/)</h2>
+
+  <details>
+    <summary>treeStore.ts — React Flow controlled mode with layout algorithm <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <div class="alert info">
+        <strong>Design decision:</strong> Uses React Flow "controlled mode" (<code class="inline">nodes</code> + <code class="inline">onNodesChange</code>) rather than uncontrolled. This lets Zustand be the single source of truth for the canvas state.
+      </div>
+      <h3>Layout algorithm (no external dependency)</h3>
+      <pre>const H_GAP = 220, V_GAP = 180
+
+// Given a focal person at (cx, cy):
+// - Parents placed above at cy - V_GAP, horizontally centred
+// - Children placed below at cy + V_GAP, horizontally centred
+// - Spouses placed right: cx + H_GAP*(i+1), cy
+// - Siblings placed left:  cx - H_GAP*(i+1), cy
+
+// Edge colours:
+// parent_of (smoothstep): #10b981 (green)
+// spouse    (straight, dashed): #f59e0b (amber)
+// sibling_of (straight, dashed): #8b5cf6 (purple)</pre>
+      <h3>Store interface</h3>
+      <pre>interface TreeStore {
+  activeFamilyTreeId: string | null
+  nodes: Node&lt;PersonNodeData&gt;[]
+  edges: Edge[]
+  loading: boolean
+  onNodesChange: (changes: NodeChange[]) =&gt; void
+  onEdgesChange: (changes: EdgeChange[]) =&gt; void
+  loadFocalNode: (treeId, personId) =&gt; Promise&lt;void&gt;   // clears + reloads canvas
+  expandNode:    (treeId, personId) =&gt; Promise&lt;void&gt;   // appends new nodes/edges
+  clearTree: () =&gt; void
+}</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>authStore.ts — Mock user + role helpers <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Default: family_admin for Sathe tree (seed user ID 00000000-...0002)
+const defaultUser: AuthUser = {
+  id: '00000000-0000-0000-0000-000000000002',
+  role: 'family_admin',
+  assignedTrees: ['10000000-0000-0000-0000-000000000001'],
+  ...
+}
+
+export const useAuth = () =&gt; {
+  const { user } = useAuthStore()
+  return {
+    user, role: user.role,
+    isPowerAdmin: user.role === 'power_admin',
+    canEdit: user.role !== 'community_member',
+    canEditTree: (treeId) =&gt; user.role === 'power_admin' || user.assignedTrees.includes(treeId),
+  }
+}</pre>
+    </div>
+  </details>
+
+  <!-- Hooks -->
+  <h2 id="hooks">Hooks (src/hooks/)</h2>
+  <details>
+    <summary>usePersonSearch.ts — 350 ms debounce <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>export function usePersonSearch(surname?: string) {
+  const [query, setQuery] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
+
+  useEffect(() =&gt; {
+    const t = setTimeout(() =&gt; setDebouncedQ(query), 350)
+    return () =&gt; clearTimeout(t)
+  }, [query])
+
+  const { data: results = [], isFetching } = useSearch(debouncedQ, surname)
+  return { query, setQuery, results, isFetching }
+}</pre>
+    </div>
+  </details>
+
+  <!-- i18n -->
+  <h2 id="i18n">i18n (src/i18n/)</h2>
+  <details>
+    <summary>12 translation files — EN / HI / MR × 4 namespaces <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <table class="file-table">
+        <tr><th>File</th><th>Language</th><th>Namespace</th></tr>
+        <tr><td>en/common.json</td><td>English</td><td>app labels, actions</td></tr>
+        <tr><td>en/tree.json</td><td>English</td><td>tree canvas labels</td></tr>
+        <tr><td>en/person.json</td><td>English</td><td>person fields + form</td></tr>
+        <tr><td>en/admin.json</td><td>English</td><td>admin panel</td></tr>
+        <tr><td>hi/common.json</td><td>हिंदी</td><td>—</td></tr>
+        <tr><td>hi/tree.json</td><td>हिंदी</td><td>—</td></tr>
+        <tr><td>hi/person.json</td><td>हिंदी</td><td>—</td></tr>
+        <tr><td>hi/admin.json</td><td>हिंदी</td><td>—</td></tr>
+        <tr><td>mr/common.json</td><td>मराठी</td><td>—</td></tr>
+        <tr><td>mr/tree.json</td><td>मराठी</td><td>—</td></tr>
+        <tr><td>mr/person.json</td><td>मराठी</td><td>—</td></tr>
+        <tr><td>mr/admin.json</td><td>मराठी</td><td>—</td></tr>
+      </table>
+      <div class="alert warn" style="margin-top:.75rem">
+        <strong>Keys added during phase:</strong> <code class="inline">surnames</code>, <code class="inline">surnameRelationships</code> added to all 3 common.json files. Keys <code class="inline">née</code>, <code class="inline">edit</code>, <code class="inline">save</code>, <code class="inline">create</code>, <code class="inline">cancel</code>, <code class="inline">birthMonthYear</code>, <code class="inline">deathMonthYear</code>, <code class="inline">tree</code>, <code class="inline">customFields</code> added to all 3 person.json files.
+      </div>
+    </div>
+  </details>
+
+  <!-- MSW Mocks -->
+  <h2 id="mocks">MSW Mocks (src/mocks/)</h2>
+  <details>
+    <summary>handlers.ts — All API endpoints mocked with 17 seed persons <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <p style="font-size:.82rem;color:var(--muted);margin-bottom:.5rem">Matches real API contract exactly — flat arrays for search, <code class="inline">{ person, relations: RelationDto[] }</code> for tree nodes (not separate parents/children/spouses objects).</p>
+      <pre>// Endpoints mocked:
+GET  /api/v1/trees                          → 2 trees (Sathe, Panse)
+GET  /api/v1/trees/:treeId/node/:personId   → person + relations[]
+GET  /api/v1/surnames                       → 2 surnames with memberCount + recentPerson
+GET  /api/v1/surnames/relationships         → 1 SurnameLink (Sathe↔Panse via Meena)
+GET  /api/v1/search?q=...                   → filtered SearchResult[]
+GET  /api/v1/persons/:id                    → Person
+GET  /api/v1/persons/:id/detail             → PersonDetail with jobs[]
+POST /api/v1/persons                        → created Person (201)
+PUT  /api/v1/persons/:id                    → updated Person (200)</pre>
+    </div>
+  </details>
+
+  <!-- Common Components -->
+  <h2 id="common">Components — Common</h2>
+  <details>
+    <summary>Avatar.tsx — Circular image with initials fallback <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// If src is null or errors → shows initials (up to 2 words) in blue circle
+// Size prop controls both px dimensions and font-size (size * 0.35)
+&lt;Avatar src={person.photoBlobUrl} name={person.fullName} size={60} /&gt;</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Button.tsx — 4 variants + loading spinner <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Variants: primary (blue), secondary (gray), danger (red), ghost (transparent)
+// Loading: shows animated border spinner, disables button
+&lt;Button variant="primary" loading={isPending}&gt;Save&lt;/Button&gt;</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Modal.tsx — Portal with Escape key close <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Renders into document.body via createPortal
+// Closes on Escape key (useEffect cleans up listener)
+// Semi-opaque backdrop with centered white card
+&lt;Modal open={editing} title="Edit Person" onClose={() =&gt; setEditing(false)}&gt;
+  &lt;PersonForm ... /&gt;
+&lt;/Modal&gt;</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>Badge.tsx — Auto-coloured chip by relationship / role type <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Auto-maps known labels to colours:
+// spouse → amber, parent_of/child_of → green
+// sibling_of → purple, in_law_of/step_parent_of → blue
+// power_admin → red, family_admin → blue, community_member → gray
+// Unknown labels → gray fallback
+&lt;Badge label={user.role} /&gt;         // e.g. "family admin" chip
+&lt;Badge label="spouse" /&gt;             // amber chip</pre>
+    </div>
+  </details>
+
+  <!-- Layout Components -->
+  <h2 id="layout">Components — Layout</h2>
+  <details>
+    <summary>AppShell.tsx + TopBar.tsx + LeftPane.tsx <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// AppShell: flex-col h-screen overflow-hidden
+// ┌──────────────────────────────────┐
+// │ TopBar (h-14, fixed)             │
+// ├──────────┬───────────────────────┤
+// │ LeftPane │ main (flex-1)        │
+// │ (w-52)   │ (children)           │
+// └──────────┴───────────────────────┘
+
+// TopBar: logo link | SearchBar | language switcher (EN/हि/म) | user avatar + badge
+// LeftPane: surname list from /surnames API → SurnamePanel items
+//           Footer link → /surnames relationships page</pre>
+    </div>
+  </details>
+
+  <!-- Search Components -->
+  <h2 id="search">Components — Search</h2>
+  <details>
+    <summary>SearchBar.tsx + SearchResults.tsx — Debounced dropdown <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <div class="alert info">
+        <strong>onMouseDown vs onClick on result items:</strong> Using <code class="inline">onMouseDown</code> on result buttons prevents the input's <code class="inline">onBlur</code> (which closes the dropdown) from firing before the click registers — a common dropdown race condition.
+      </div>
+      <pre>// SearchBar: controlled input → usePersonSearch(debounced 350ms)
+// → shows SearchResults dropdown when results.length > 0
+// SearchResults: Avatar + fullName + location/birth + surname Badge
+// Clicking a result navigates to /person/:id and clears the query</pre>
+    </div>
+  </details>
+
+  <!-- Tree Components -->
+  <h2 id="tree">Components — Tree Canvas</h2>
+  <details>
+    <summary>TreeCanvas.tsx — React Flow canvas <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Wired to Zustand treeStore (controlled mode)
+// Features: MiniMap (zoomable+pannable), Controls, dot Background
+// Empty state: shows 🌳 prompt to select a surname
+// Loading state: shows "Loading tree…" spinner text
+// nodeTypes = { person: PersonNode }
+// edgeTypes = {} (inline styled edges from treeStore)</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary>PersonNode.tsx — Custom React Flow node <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// Renders: Avatar (60×60) + name text (max 2 lines, truncated)
+// Center node: ring-2 ring-blue-500 highlight
+// Hover: shows "+" expand button (opacity transition)
+// Double-click: navigate('/person/:id')
+// Expand click: calls treeStore.expandNode(treeId, personId)
+// Native tooltip: "location · birth · † death" (title attr)
+// Handles: top (target) + bottom (source), both opacity-0</pre>
+    </div>
+  </details>
+
+  <!-- Person Components -->
+  <h2 id="person">Components — Person</h2>
+  <details>
+    <summary>PersonCard.tsx + PersonDetail.tsx + PersonForm.tsx <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h3>PersonCard — compact</h3>
+      <pre>// Avatar + fullName + surname badge + location + birth
+// Clickable → /person/:id</pre>
+
+      <h3>PersonDetail — full view</h3>
+      <pre>// Header: Avatar (80px) + name + née + location/birth/death/phone icons
+// Edit button only if canEditTree(primaryTreeId)
+// Sections: Hobbies, Education, Skills, Jobs (timeline with dots), Custom Fields
+// Back button uses navigate(-1)</pre>
+
+      <h3>PersonForm — create &amp; edit</h3>
+      <pre>// Fields: fullName*, nameBefore, birthMonthYear, deathMonthYear, location, phone
+// Tree selector (create mode only, hidden for edits)
+// Calls useCreatePerson() or useUpdatePerson(id) depending on person prop
+// Loading state via mutation.isPending</pre>
+    </div>
+  </details>
+
+  <!-- Surname Components -->
+  <h2 id="surname">Components — Surname</h2>
+  <details>
+    <summary>SurnamePanel.tsx + SurnameRelationships.tsx <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <pre>// SurnamePanel: left-pane button — surname label + memberCount badge
+// On click: calls loadFocalNode(treeId, recentPerson.id)
+
+// SurnameRelationships: table
+// Columns: Surname A (blue badge) | Surname B (green badge) | Link Person (link) | Hops | Detected
+// Empty state row when no links exist</pre>
+    </div>
+  </details>
+
+  <!-- Pages -->
+  <h2 id="pages">Pages (src/pages/)</h2>
+  <details>
+    <summary>TreePage + PersonDetailPage + SurnameRelationshipsPage <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h3>TreePage.tsx</h3>
+      <pre>&lt;AppShell&gt;&lt;TreeCanvas /&gt;&lt;/AppShell&gt;
+// Simplest page — canvas fills the remaining space after TopBar + LeftPane</pre>
+
+      <h3>PersonDetailPage.tsx</h3>
+      <pre>const { id } = useParams()
+const { data: detail, isLoading, error } = usePersonDetail(id)
+// Shows PersonDetail with Edit button
+// Edit button opens Modal with PersonForm (update mode)
+// Error and loading states handled inline</pre>
+
+      <h3>SurnameRelationshipsPage.tsx</h3>
+      <pre>&lt;AppShell&gt;
+  &lt;div className="max-w-4xl mx-auto p-6"&gt;
+    &lt;h1&gt;{t('surnameRelationships')}&lt;/h1&gt;
+    &lt;SurnameRelationships /&gt;
+  &lt;/div&gt;
+&lt;/AppShell&gt;</pre>
+    </div>
+  </details>
+
+  <!-- Design Decisions -->
+  <h2 id="decisions">Design Decisions</h2>
+
+  <details>
+    <summary>Why no dagre / elkjs for layout?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">dagre is officially deprecated and has no @types. elkjs requires WebAssembly and adds ~1 MB to the bundle. The family tree layout is simple enough (parents above, children below, spouses right, siblings left) that a manual 15-line algorithm handles it correctly. More complex layouts can be added later if needed.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why controlled React Flow mode?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">React Flow v12 recommends controlled mode when external state management is used. This ensures Zustand is the single source of truth — the tree canvas can be updated from any component (LeftPane click, search result click, expand button) without prop drilling.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why PersonNodeData extends Record&lt;string, unknown&gt;?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">React Flow v12 requires node data to be indexable. The <code class="inline">extends Record&lt;string, unknown&gt;</code> constraint satisfies this at the type level without using <code class="inline">any</code>.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why onMouseDown on SearchResult items?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">The SearchBar input has <code class="inline">onBlur={() => setTimeout(() => setOpen(false), 150)}</code>. When a user clicks a result, <code class="inline">onBlur</code> fires first (before the click event). Using <code class="inline">onMouseDown</code> fires before blur, allowing the navigation to happen before the dropdown closes.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Auth mock default — family_admin for Sathe tree</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">The default mock user matches seed user ID <code class="inline">00000000-...0002</code> (Ramesh Sathe) with <code class="inline">family_admin</code> role and assignedTrees = [Sathe tree ID]. This makes the default MSW experience realistic: Edit buttons appear on Sathe persons, are hidden on Panse persons, and community_member role can be set by modifying authStore.user.</p>
+    </div>
+  </details>
+
+  <!-- Fixes -->
+  <h2 id="fixes">Fixes Applied During Phase</h2>
+
+  <details open>
+    <summary class="badge fix" style="font-size:.85rem;padding:.5rem 1rem">Fix 1 — tsconfig missing vite/client types → TS2339 on import.meta.env</summary>
+    <div class="details-body">
+      <h3>Error</h3>
+      <pre>src/api/client.ts(3,26): error TS2339: Property 'env' does not exist on type 'ImportMeta'
+src/main.tsx(11,19): error TS2339: Property 'env' does not exist on type 'ImportMeta'</pre>
+      <h3>Root cause</h3>
+      <p style="font-size:.83rem;margin:.5rem 0">The <code class="inline">ImportMeta</code> type in TypeScript's DOM lib doesn't include <code class="inline">.env</code>. Vite adds it via the <code class="inline">vite/client</code> type definitions.</p>
+      <h3>Fix</h3>
+      <pre>// tsconfig.json — added to compilerOptions:
+"types": ["vite/client"]</pre>
+    </div>
+  </details>
+
+  <details>
+    <summary class="badge fix" style="font-size:.85rem;padding:.5rem 1rem">Fix 2 — Missing i18n keys in person.json and common.json</summary>
+    <div class="details-body">
+      <h3>Keys added to common.json (all 3 languages)</h3>
+      <pre>"surnames": "Surnames"
+"surnameRelationships": "Surname Relationships"</pre>
+      <h3>Keys added to person.json (all 3 languages)</h3>
+      <pre>"née", "edit", "save", "create", "cancel"
+"birthMonthYear", "deathMonthYear", "tree", "customFields"</pre>
+    </div>
+  </details>
+
+  <!-- Verification -->
+  <h2 id="verify">Verification</h2>
+
+  <ul class="check-list">
+    <li><strong>npm install</strong> — 288 packages installed, no install errors</li>
+    <li><strong>npx tsc --noEmit</strong> — 0 TypeScript errors (strict mode on)</li>
+    <li><strong>npm run build</strong> — 585 modules bundled cleanly in 2.35 s</li>
+    <li><strong>npx msw init public/ --save</strong> — mockServiceWorker.js copied to public/</li>
+    <li><strong>npm run dev</strong> — Vite dev server starts in 383 ms, no startup errors</li>
+    <li class="warn"><strong>Browser UI test</strong> — Requires manual verification with VITE_USE_MOCK=true (UI rendering cannot be verified in CLI)</li>
+  </ul>
+
+  <div class="alert info" style="margin-top:1.5rem">
+    <strong>How to verify UI manually (MSW mode):</strong><br/>
+    <code class="inline">cd frontend &amp;&amp; VITE_USE_MOCK=true npm run dev</code><br/>
+    1. Open http://localhost:5173 → tree canvas with "select a surname" prompt<br/>
+    2. Click "Sathe" in left pane → canvas shows Suresh Sathe centred with parents &amp; children<br/>
+    3. Double-click Rahul Sathe → PersonDetailPage with career history<br/>
+    4. Click language buttons (EN/हि/म) in top bar → labels switch language<br/>
+    5. Type "Rahul" in search bar → dropdown appears with 1 result<br/>
+    6. Click "Surname Relationships →" → table shows Sathe↔Panse via Meena (4 hops)
+  </div>
+
+  <h2 style="margin-top:2.5rem">Phase F — Next Step</h2>
+  <div class="alert ok">
+    Phase E complete. Next is <strong>Phase F — Infrastructure &amp; CI/CD</strong>:<br/>
+    Bicep templates (SQL, Cosmos DB, Blob Storage, App Service, Static Web Apps) + GitHub Actions workflows for backend (dotnet build → test → deploy) and frontend (npm build → deploy to Azure Static Web Apps).
+  </div>
+
+</main>
+
+<script>
+  function toggleTheme() {
+    const d = document.documentElement;
+    const isDark = d.getAttribute('data-theme') === 'dark';
+    d.setAttribute('data-theme', isDark ? '' : 'dark');
+    document.getElementById('theme-toggle').textContent = isDark ? '🌙 Dark' : '☀️ Light';
+  }
+
+  // Active sidebar link on scroll
+  const sections = document.querySelectorAll('section, h2[id]');
+  const links    = document.querySelectorAll('#sidebar nav a');
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        links.forEach(l => l.classList.remove('active'));
+        const a = document.querySelector(`#sidebar nav a[href="#${e.target.id}"]`);
+        if (a) a.classList.add('active');
+      }
+    });
+  }, { rootMargin: '-20% 0px -70% 0px' });
+  document.querySelectorAll('[id]').forEach(el => obs.observe(el));
+</script>
+
+</body>
+</html>

@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phase F — Infrastructure &amp; CI/CD · FamilyTree Build Report</title>
+<style>
+  :root {
+    --bg:#f8fafc;--surface:#ffffff;--border:#e2e8f0;--text:#1e293b;--muted:#64748b;
+    --accent:#2563eb;--accent-light:#dbeafe;--green:#16a34a;--green-light:#dcfce7;
+    --amber:#d97706;--amber-light:#fef3c7;--red:#dc2626;--red-light:#fee2e2;
+    --purple:#7c3aed;--purple-light:#ede9fe;--sidebar-w:270px;
+  }
+  [data-theme="dark"]{
+    --bg:#0f172a;--surface:#1e293b;--border:#334155;--text:#e2e8f0;--muted:#94a3b8;
+    --accent:#60a5fa;--accent-light:#1e3a5f;--green:#4ade80;--green-light:#14532d;
+    --amber:#fbbf24;--amber-light:#451a03;--red:#f87171;--red-light:#450a0a;
+    --purple:#a78bfa;--purple-light:#2e1065;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh;}
+  #sidebar{width:var(--sidebar-w);min-height:100vh;background:var(--surface);border-right:1px solid var(--border);position:fixed;top:0;left:0;overflow-y:auto;padding:1rem 0;z-index:100;}
+  #sidebar .logo{padding:.5rem 1.25rem 1rem;font-size:1rem;font-weight:700;color:var(--accent);display:flex;align-items:center;gap:.5rem;}
+  #sidebar .phase-badge{font-size:.65rem;background:var(--accent);color:#fff;padding:.15rem .4rem;border-radius:999px;}
+  #sidebar nav a{display:block;padding:.45rem 1.25rem;font-size:.82rem;color:var(--muted);text-decoration:none;border-left:3px solid transparent;transition:all .15s;}
+  #sidebar nav a:hover,#sidebar nav a.active{color:var(--accent);border-left-color:var(--accent);background:var(--accent-light);}
+  #sidebar .section-label{padding:.8rem 1.25rem .2rem;font-size:.68rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);}
+  #main{margin-left:var(--sidebar-w);flex:1;padding:2rem;max-width:1100px;}
+  #topbar{position:sticky;top:0;background:var(--bg);z-index:50;display:flex;align-items:center;justify-content:space-between;padding:.75rem 0;margin-bottom:1.5rem;border-bottom:1px solid var(--border);}
+  #topbar h1{font-size:1.3rem;font-weight:700;}
+  #topbar .meta{font-size:.78rem;color:var(--muted);}
+  #theme-toggle{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.35rem .75rem;cursor:pointer;font-size:.8rem;color:var(--text);}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:1rem;margin-bottom:2rem;}
+  .stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:1rem 1.25rem;}
+  .stat-card .num{font-size:2rem;font-weight:800;color:var(--accent);}
+  .stat-card .label{font-size:.78rem;color:var(--muted);margin-top:.2rem;}
+  h2{font-size:1.1rem;font-weight:700;margin:2rem 0 1rem;padding-bottom:.4rem;border-bottom:2px solid var(--accent);color:var(--text);}
+  h3{font-size:.95rem;font-weight:600;margin:1.25rem 0 .6rem;color:var(--text);}
+  h4{font-size:.85rem;font-weight:600;margin:.9rem 0 .4rem;color:var(--muted);}
+  .timeline{position:relative;padding-left:1.5rem;}
+  .timeline::before{content:'';position:absolute;left:.35rem;top:0;bottom:0;width:2px;background:var(--border);}
+  .tl-item{position:relative;margin-bottom:1.25rem;}
+  .tl-item::before{content:'';position:absolute;left:-1.28rem;top:.35rem;width:10px;height:10px;border-radius:50%;background:var(--accent);}
+  .tl-item.success::before{background:var(--green);}
+  .tl-item.warn::before{background:var(--amber);}
+  .tl-item .tl-time{font-size:.72rem;color:var(--muted);margin-bottom:.15rem;}
+  .tl-item .tl-title{font-size:.88rem;font-weight:600;}
+  .tl-item .tl-desc{font-size:.82rem;color:var(--muted);margin-top:.2rem;}
+  details{border:1px solid var(--border);border-radius:10px;margin-bottom:.75rem;overflow:hidden;}
+  summary{padding:.75rem 1rem;cursor:pointer;font-weight:600;font-size:.88rem;background:var(--surface);display:flex;justify-content:space-between;align-items:center;list-style:none;user-select:none;}
+  summary::-webkit-details-marker{display:none;}
+  summary::after{content:'▸';font-size:.7rem;color:var(--muted);transition:transform .2s;}
+  details[open]>summary::after{transform:rotate(90deg);}
+  details[open]>summary{border-bottom:1px solid var(--border);}
+  .details-body{padding:1rem;background:var(--bg);}
+  pre{background:#0f172a;color:#e2e8f0;border-radius:8px;padding:1rem;overflow-x:auto;font-size:.78rem;line-height:1.6;margin:.5rem 0;}
+  [data-theme="dark"] pre{background:#020617;border:1px solid #1e293b;}
+  code.inline{background:var(--accent-light);color:var(--accent);padding:.1em .35em;border-radius:4px;font-size:.82em;font-family:monospace;}
+  .file-table{width:100%;border-collapse:collapse;font-size:.82rem;}
+  .file-table th{background:var(--surface);border:1px solid var(--border);padding:.45rem .75rem;text-align:left;font-weight:600;font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);}
+  .file-table td{border:1px solid var(--border);padding:.4rem .75rem;vertical-align:top;}
+  .file-table tr:nth-child(even) td{background:var(--bg);}
+  .badge{display:inline-block;padding:.15rem .55rem;border-radius:999px;font-size:.72rem;font-weight:600;}
+  .badge.new{background:var(--green-light);color:var(--green);}
+  .badge.mod{background:var(--amber-light);color:var(--amber);}
+  .badge.infra{background:var(--purple-light);color:var(--purple);}
+  .check-list{list-style:none;}
+  .check-list li{padding:.35rem 0;font-size:.85rem;display:flex;align-items:flex-start;gap:.5rem;}
+  .check-list li::before{content:'✓';color:var(--green);font-weight:700;flex-shrink:0;}
+  .check-list li.warn::before{content:'⚠';color:var(--amber);}
+  .alert{border-radius:8px;padding:.75rem 1rem;font-size:.83rem;margin:.75rem 0;line-height:1.5;}
+  .alert.info{background:var(--accent-light);border-left:4px solid var(--accent);}
+  .alert.ok{background:var(--green-light);border-left:4px solid var(--green);}
+  .alert.warn{background:var(--amber-light);border-left:4px solid var(--amber);}
+  .arch-grid{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin:1rem 0;}
+  @media(max-width:768px){#sidebar{transform:translateX(-100%);}#main{margin-left:0;padding:1rem;}.arch-grid{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+
+<nav id="sidebar">
+  <div class="logo">🌳 FamilyTree <span class="phase-badge">Phase F</span></div>
+  <div class="section-label">Overview</div>
+  <nav>
+    <a href="#summary">Summary &amp; Stats</a>
+    <a href="#architecture">Architecture Diagram</a>
+    <a href="#timeline">Timeline of Actions</a>
+  </nav>
+  <div class="section-label">Bicep Infra</div>
+  <nav>
+    <a href="#main-bicep">main.bicep — Orchestrator</a>
+    <a href="#sql-bicep">sql.bicep — Azure SQL</a>
+    <a href="#cosmos-bicep">cosmos.bicep — Cosmos DB Gremlin</a>
+    <a href="#storage-bicep">storage.bicep — Blob + CDN</a>
+    <a href="#appservice-bicep">appservice.bicep — App Service + SWA</a>
+  </nav>
+  <div class="section-label">CI/CD Workflows</div>
+  <nav>
+    <a href="#backend-workflow">backend-deploy.yml</a>
+    <a href="#frontend-workflow">frontend-deploy.yml</a>
+    <a href="#secrets">Required Secrets &amp; Variables</a>
+  </nav>
+  <div class="section-label">Deploy Guide</div>
+  <nav>
+    <a href="#deploy-steps">Step-by-step Deployment</a>
+    <a href="#decisions">Design Decisions</a>
+    <a href="#project-complete">Project Complete</a>
+  </nav>
+</nav>
+
+<main id="main">
+
+  <div id="topbar">
+    <div>
+      <h1>Phase F — Infrastructure &amp; CI/CD</h1>
+      <div class="meta">FamilyTree · Bicep + GitHub Actions · 2026-05-20</div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
+  </div>
+
+  <!-- Summary -->
+  <section id="summary">
+    <div class="summary-grid">
+      <div class="stat-card"><div class="num">7</div><div class="label">Files Created</div></div>
+      <div class="stat-card"><div class="num">5</div><div class="label">Bicep Templates</div></div>
+      <div class="stat-card"><div class="num">2</div><div class="label">CI/CD Workflows</div></div>
+      <div class="stat-card"><div class="num">4</div><div class="label">Azure Services</div></div>
+      <div class="stat-card"><div class="num">199</div><div class="label">Lines of CI/CD YAML</div></div>
+      <div class="stat-card"><div class="num">0</div><div class="label">Braces Mismatches</div></div>
+    </div>
+
+    <div class="alert ok">
+      <strong>Status:</strong> All 5 Bicep files have balanced braces and correct parameter/output counts.
+      Both workflow YAML files have no tab characters and all required keys (on:, jobs:, steps:).
+    </div>
+  </section>
+
+  <!-- Architecture -->
+  <h2 id="architecture">Architecture Diagram</h2>
+  <pre style="font-size:.75rem;line-height:1.5">
+┌──────────────────────────────────────────────────────────────────────┐
+│  GitHub Actions (push to main)                                       │
+│                                                                      │
+│  backend-deploy.yml          frontend-deploy.yml                     │
+│  ├── dotnet restore          ├── npm ci                              │
+│  ├── dotnet build (Release)  ├── tsc --noEmit                       │
+│  ├── dotnet test (58 tests)  ├── vite build (VITE_* from secrets)   │
+│  ├── dotnet publish          └── static-web-apps-deploy (skip build) │
+│  └── webapps-deploy          │                                       │
+└──────────┬───────────────────┴───────────────────────────────────────┘
+           │                                                            │
+           ▼                                                            ▼
+  ┌─────────────────┐                                    ┌───────────────────────┐
+  │  Azure App      │ ◄── appsettings via env vars ──   │  Azure Static Web App  │
+  │  Service        │                                    │  (React SPA / CDN)     │
+  │  (.NET 8 API)   │──────── HTTPS ──────────────────► │  VITE_API_BASE_URL     │
+  └────────┬────────┘                                    └───────────────────────┘
+           │
+     ┌─────┴──────────────────────────────────┐
+     │                                        │
+     ▼                                        ▼
+  ┌─────────────────┐               ┌──────────────────────┐
+  │  Azure SQL      │               │  Cosmos DB            │
+  │  (EF Core)      │               │  Gremlin API          │
+  │  Persons,Trees, │               │  person vertices +    │
+  │  Users,AuditLog │               │  relationship edges   │
+  └─────────────────┘               └──────────────────────┘
+                                             │
+                    ┌────────────────────────┘
+                    ▼
+         ┌────────────────────┐
+         │  Azure Blob Storage │ ◄── SAS token direct PUT
+         │  + Azure CDN        │     from browser
+         │  person-photos/     │──── cached photos ──► SPA
+         └────────────────────┘
+</pre>
+
+  <!-- Timeline -->
+  <h2 id="timeline">Timeline of Actions</h2>
+  <div class="timeline">
+    <div class="tl-item success">
+      <div class="tl-time">Step 1</div>
+      <div class="tl-title">Read codebase context</div>
+      <div class="tl-desc">Read GraphDbContext.cs for Gremlin config keys (CosmosDb:GremlinEndpoint, Port, Username, Password, EnableSsl). Read Program.cs for AzureSQL:ConnectionString, AzureAdB2C:* keys.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 2</div>
+      <div class="tl-title">Created infra/ directory + sql.bicep</div>
+      <div class="tl-desc">Azure SQL Server (v12) + Basic/S1 database tier by environment + AllowAzureServices firewall rule + connection string output.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 3</div>
+      <div class="tl-title">Created cosmos.bicep</div>
+      <div class="tl-desc">Cosmos DB account with EnableGremlin capability + Gremlin database + graph partitioned by /primaryTreeId + free tier for dev + outputs for all 4 connection properties.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 4</div>
+      <div class="tl-title">Created storage.bicep</div>
+      <div class="tl-desc">Storage account (StorageV2, Standard_LRS) + person-photos container (public blob access) + CORS for direct browser PUT + CDN profile (Standard_Microsoft) + endpoint with 24h cache TTL per CLAUDE.md NFR.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 5</div>
+      <div class="tl-title">Created appservice.bicep</div>
+      <div class="tl-desc">Linux App Service Plan (B1/B2 by env) + .NET 8 web app with all 19 app settings wired from module outputs + Azure Static Web App (Free tier) with skipGithubActionWorkflowGeneration:true.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 6</div>
+      <div class="tl-title">Created main.bicep orchestrator</div>
+      <div class="tl-desc">Calls all 4 modules with dependsOn ordering (appservice after sql/cosmos/storage). 9 input parameters, 6 outputs including secure staticWebAppDeployToken.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 7</div>
+      <div class="tl-title">Created backend-deploy.yml</div>
+      <div class="tl-desc">2-job workflow: build-and-test (restore → build → test with USE_MOCK_AUTH=true → publish → upload artifact) and deploy (download artifact → webapps-deploy). PR path filter on backend/**.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Step 8</div>
+      <div class="tl-title">Created frontend-deploy.yml</div>
+      <div class="tl-desc">2-job workflow: build (npm ci → tsc --noEmit → vite build with all VITE_* env vars → upload dist) and deploy (download dist → static-web-apps-deploy with skip_app_build:true). PR path filter on frontend/**.</div>
+    </div>
+    <div class="tl-item success">
+      <div class="tl-time">Verify</div>
+      <div class="tl-title">Structural validation via Node.js</div>
+      <div class="tl-desc">All 5 Bicep files: balanced braces. Both YAML files: no tabs, has on/jobs/steps keys. Azure CLI not available locally — Bicep will be validated at deploy time by ARM.</div>
+    </div>
+  </div>
+
+  <!-- main.bicep -->
+  <h2 id="main-bicep">main.bicep — Orchestrator</h2>
+  <details open>
+    <summary>Parameters, module calls, and outputs <span class="badge infra">BICEP</span></summary>
+    <div class="details-body">
+      <table class="file-table" style="margin-bottom:1rem">
+        <tr><th>Parameter</th><th>Type</th><th>Default</th><th>Description</th></tr>
+        <tr><td>appName</td><td>string</td><td>'familytree'</td><td>Used in all resource names</td></tr>
+        <tr><td>environment</td><td>'dev'|'prod'</td><td>'dev'</td><td>Controls SKU choices</td></tr>
+        <tr><td>location</td><td>string</td><td>resourceGroup().location</td><td>Azure region</td></tr>
+        <tr><td>sqlAdminLogin</td><td>string</td><td>'ftadmin'</td><td>SQL admin username</td></tr>
+        <tr><td>sqlAdminPassword</td><td>@secure() string</td><td>—</td><td>Pass via params file / Key Vault</td></tr>
+        <tr><td>b2cClientId</td><td>string</td><td>—</td><td>Azure AD B2C app registration</td></tr>
+        <tr><td>b2cDomain</td><td>string</td><td>—</td><td>B2C tenant subdomain</td></tr>
+        <tr><td>b2cPolicyId</td><td>string</td><td>'B2C_1_signupsignin'</td><td>User flow name</td></tr>
+        <tr><td>allowedOrigin</td><td>string</td><td>''</td><td>CORS — set after first deploy</td></tr>
+      </table>
+      <h4>Deploy command</h4>
+      <pre>az group create -n familytree-rg-prod -l eastus2
+
+az deployment group create \
+  -g familytree-rg-prod \
+  -f infra/main.bicep \
+  --parameters environment=prod \
+               appName=familytree \
+               sqlAdminPassword='${{ secrets.SQL_ADMIN_PASSWORD }}' \
+               b2cClientId='...' \
+               b2cDomain='myfamilytree'</pre>
+    </div>
+  </details>
+
+  <!-- sql.bicep -->
+  <h2 id="sql-bicep">sql.bicep — Azure SQL</h2>
+  <details>
+    <summary>SQL Server + Database + Firewall <span class="badge infra">BICEP</span></summary>
+    <div class="details-body">
+      <div class="alert info">
+        <strong>SKU scaling:</strong> dev → Basic (5 DTU, ~$5/mo). prod → S1 Standard (20 DTU, ~$30/mo). Upgrade to S3+ for high traffic.
+      </div>
+      <h4>Resources created</h4>
+      <ul style="font-size:.83rem;line-height:1.8;padding-left:1.25rem">
+        <li><code class="inline">Microsoft.Sql/servers</code> — <code class="inline">{appName}-sql-{env}</code></li>
+        <li><code class="inline">Microsoft.Sql/servers/firewallRules</code> — AllowAzureServices (0.0.0.0–0.0.0.0)</li>
+        <li><code class="inline">Microsoft.Sql/servers/databases</code> — <code class="inline">{appName}db</code>, collation SQL_Latin1_General_CP1_CI_AS</li>
+      </ul>
+      <h4>Outputs</h4>
+      <pre>output connectionString string  // ADO.NET connection string
+output serverFqdn      string  // e.g. familytree-sql-prod.database.windows.net</pre>
+    </div>
+  </details>
+
+  <!-- cosmos.bicep -->
+  <h2 id="cosmos-bicep">cosmos.bicep — Cosmos DB Gremlin</h2>
+  <details>
+    <summary>Cosmos DB account + Gremlin database + graph <span class="badge infra">BICEP</span></summary>
+    <div class="details-body">
+      <div class="alert info">
+        <strong>Free tier (dev):</strong> When <code class="inline">enableFreeTier: true</code>, Cosmos DB gives 1000 RU/s and 25GB storage free — sufficient for dev/test. Only one free-tier account per subscription.
+      </div>
+      <h4>Resources created</h4>
+      <ul style="font-size:.83rem;line-height:1.8;padding-left:1.25rem">
+        <li><code class="inline">Microsoft.DocumentDB/databaseAccounts</code> — kind: GlobalDocumentDB, capability: EnableGremlin</li>
+        <li><code class="inline">Microsoft.DocumentDB/databaseAccounts/gremlinDatabases</code> — <code class="inline">familytree</code>, 400 RU (prod)</li>
+        <li><code class="inline">Microsoft.DocumentDB/databaseAccounts/gremlinDatabases/graphs</code> — <code class="inline">relationships</code>, partitioned by /primaryTreeId</li>
+      </ul>
+      <h4>Partition key rationale</h4>
+      <p style="font-size:.83rem;line-height:1.5;margin:.5rem 0">
+        <code class="inline">/primaryTreeId</code> is chosen because the most common graph traversals (expand node, find neighbours) stay within a single family tree. Cross-tree queries (surname relationship detection) are infrequent background jobs that tolerate cross-partition reads.
+      </p>
+      <h4>Outputs → App Settings mapping</h4>
+      <pre>cosmos.outputs.gremlinEndpoint  → CosmosDb__GremlinEndpoint  (e.g. familytree-cosmos-prod.gremlin.cosmos.azure.com)
+cosmos.outputs.gremlinPort      → CosmosDb__GremlinPort       (443)
+cosmos.outputs.gremlinUsername  → CosmosDb__GremlinUsername    (/dbs/familytree/colls/relationships)
+cosmos.outputs.primaryKey       → CosmosDb__GremlinPassword    (@secure)</pre>
+    </div>
+  </details>
+
+  <!-- storage.bicep -->
+  <h2 id="storage-bicep">storage.bicep — Blob Storage + CDN</h2>
+  <details>
+    <summary>Storage account + person-photos container + CDN endpoint with 24h cache <span class="badge infra">BICEP</span></summary>
+    <div class="details-body">
+      <div class="alert info">
+        <strong>CORS configuration:</strong> Allows PUT from any origin — required for the SAS token direct-upload flow (browser PUT directly to Blob). Restricting to the SWA origin is recommended for production hardening.
+      </div>
+      <h4>Resources created</h4>
+      <ul style="font-size:.83rem;line-height:1.8;padding-left:1.25rem">
+        <li><code class="inline">Microsoft.Storage/storageAccounts</code> — Standard_LRS, StorageV2, TLS 1.2</li>
+        <li><code class="inline">Microsoft.Storage/storageAccounts/blobServices</code> — CORS for GET/PUT/OPTIONS</li>
+        <li><code class="inline">Microsoft.Storage/storageAccounts/blobServices/containers</code> — <code class="inline">person-photos</code>, public blob access</li>
+        <li><code class="inline">Microsoft.Cdn/profiles</code> — Standard_Microsoft</li>
+        <li><code class="inline">Microsoft.Cdn/profiles/endpoints</code> — HTTPS only, 24h cache for image/* content types</li>
+      </ul>
+      <h4>Photo upload flow (CLAUDE.md §Photo upload)</h4>
+      <pre>1. Client → POST /persons/{id}/photo-upload-url → { sasUrl, blobName }
+2. Client → PUT sasUrl (file bytes directly, no API bandwidth)
+3. Client → PUT /persons/{id} { photoBlobUrl: cdnBaseUrl + '/' + blobName }
+4. API saves CDN URL to SQL + Cosmos vertex property</pre>
+    </div>
+  </details>
+
+  <!-- appservice.bicep -->
+  <h2 id="appservice-bicep">appservice.bicep — App Service + Static Web App</h2>
+  <details>
+    <summary>Linux App Service Plan + .NET 8 API + Azure Static Web App <span class="badge infra">BICEP</span></summary>
+    <div class="details-body">
+      <h4>App Service app settings wired (19 total)</h4>
+      <pre>ASPNETCORE_ENVIRONMENT          Production | Development
+USE_MOCK_AUTH                   false
+AzureSQL__ConnectionString      from sql module output
+CosmosDb__GremlinEndpoint       from cosmos module output
+CosmosDb__GremlinPort           443
+CosmosDb__GremlinUsername       /dbs/familytree/colls/relationships
+CosmosDb__GremlinPassword       from cosmos module output (@secure)
+CosmosDb__EnableSsl             true
+CosmosDb__Database              familytree
+CosmosDb__Container             relationships
+AzureBlob__ConnectionString     from storage module output (@secure)
+AzureBlob__ContainerName        person-photos
+AzureBlob__CdnBaseUrl           from storage module output (CDN URL)
+AzureAdB2C__Instance            https://{b2cDomain}.b2clogin.com
+AzureAdB2C__ClientId            b2cClientId param
+AzureAdB2C__Domain              {b2cDomain}.onmicrosoft.com
+AzureAdB2C__SignUpSignInPolicyId B2C_1_signupsignin
+AllowedOrigin                   frontend SWA URL (CORS)
+WEBSITE_RUN_FROM_PACKAGE        1</pre>
+      <div class="alert warn" style="margin-top:1rem">
+        <strong>Two-step CORS:</strong> <code class="inline">allowedOrigin</code> is empty on the first deploy (SWA URL not known yet). After first deploy, get the SWA URL from the output, then redeploy main.bicep with <code class="inline">allowedOrigin=https://&lt;swa-hostname&gt;</code>.
+      </div>
+      <h4>Static Web App</h4>
+      <p style="font-size:.83rem;margin:.5rem 0">
+        Free tier — sufficient for a family tree app. <code class="inline">skipGithubActionWorkflowGeneration: true</code> prevents Azure from auto-generating a workflow (we manage ours in <code class="inline">frontend-deploy.yml</code>).
+        The deploy token from <code class="inline">staticWebApp.listSecrets().properties.apiKey</code> is stored as <code class="inline">AZURE_STATIC_WEB_APPS_API_TOKEN</code> in GitHub Secrets.
+      </p>
+    </div>
+  </details>
+
+  <!-- Backend workflow -->
+  <h2 id="backend-workflow">.github/workflows/backend-deploy.yml</h2>
+  <details open>
+    <summary>2-job workflow: build+test → deploy (push to main only) <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h4>Trigger</h4>
+      <pre>on:
+  push: { branches: [main], paths: ['backend/**', '.github/workflows/backend-deploy.yml'] }
+  pull_request: { branches: [main], paths: ['backend/**', ...] }</pre>
+
+      <h4>Job 1: build-and-test</h4>
+      <pre>steps:
+  - actions/checkout@v4
+  - actions/setup-dotnet@v4  (dotnet-version: 8.0.x)
+  - dotnet restore FamilyTree.sln
+  - dotnet build --configuration Release --no-restore
+  - dotnet test --configuration Release --no-build
+      env: { USE_MOCK_AUTH: 'true' }     ← ensures FamilyTreeTestFactory sees it
+      logger: trx → ./test-results/
+  - actions/upload-artifact@v4 (test-results, always)
+  - dotnet publish FamilyTree.Api --output ./publish  (push only)
+  - actions/upload-artifact@v4 (backend-publish, retention-days: 1)</pre>
+
+      <h4>Job 2: deploy (needs: build-and-test, push to main only)</h4>
+      <pre>steps:
+  - actions/download-artifact@v4 (backend-publish → ./publish)
+  - azure/webapps-deploy@v3
+      app-name: ${{ vars.AZURE_WEBAPP_NAME }}
+      publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+      package: ./publish</pre>
+    </div>
+  </details>
+
+  <!-- Frontend workflow -->
+  <h2 id="frontend-workflow">.github/workflows/frontend-deploy.yml</h2>
+  <details open>
+    <summary>2-job workflow: build+type-check → deploy (push to main only) <span class="badge new">NEW</span></summary>
+    <div class="details-body">
+      <h4>Trigger</h4>
+      <pre>on:
+  push: { branches: [main], paths: ['frontend/**', '.github/workflows/frontend-deploy.yml'] }
+  pull_request: { branches: [main], paths: ['frontend/**', ...] }</pre>
+
+      <h4>Job 1: build</h4>
+      <pre>steps:
+  - actions/checkout@v4
+  - actions/setup-node@v4 (node 20, npm cache)
+  - npm ci  (working-directory: frontend)
+  - npx tsc --noEmit               ← type check first, fail fast
+  - npm run build                  ← vite build with VITE_* env vars
+      env:
+        VITE_USE_MOCK:         false
+        VITE_API_BASE_URL:     ${{ vars.VITE_API_BASE_URL }}
+        VITE_BLOB_CDN_BASE:    ${{ vars.VITE_BLOB_CDN_BASE }}
+        VITE_B2C_CLIENT_ID:    ${{ secrets.VITE_B2C_CLIENT_ID }}
+        VITE_B2C_AUTHORITY:    ${{ vars.VITE_B2C_AUTHORITY }}
+        VITE_B2C_REDIRECT_URI: ${{ vars.VITE_B2C_REDIRECT_URI }}
+  - actions/upload-artifact@v4 (frontend-dist → frontend/dist)</pre>
+
+      <h4>Job 2: deploy (needs: build, push to main only)</h4>
+      <pre>steps:
+  - actions/checkout@v4              ← required by SWA action for repo metadata
+  - actions/download-artifact@v4 (frontend-dist → frontend/dist)
+  - Azure/static-web-apps-deploy@v1
+      azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+      repo_token: ${{ secrets.GITHUB_TOKEN }}
+      action: upload
+      app_location: frontend
+      output_location: dist
+      skip_app_build: true          ← upload pre-built dist, skip Oryx build</pre>
+    </div>
+  </details>
+
+  <!-- Secrets -->
+  <h2 id="secrets">Required Secrets &amp; Variables</h2>
+  <details>
+    <summary>GitHub repo Settings → Secrets and Variables → Actions</summary>
+    <div class="details-body">
+      <h4>Secrets (sensitive — never logged)</h4>
+      <table class="file-table">
+        <tr><th>Name</th><th>Where to get it</th></tr>
+        <tr><td>AZURE_WEBAPP_PUBLISH_PROFILE</td><td>Azure Portal → App Service → Get publish profile → download XML</td></tr>
+        <tr><td>AZURE_STATIC_WEB_APPS_API_TOKEN</td><td>Azure Portal → Static Web App → Manage deployment token — or from Bicep output <code class="inline">staticWebAppDeployToken</code></td></tr>
+        <tr><td>VITE_B2C_CLIENT_ID</td><td>Azure AD B2C → App registrations → your app → Application (client) ID</td></tr>
+      </table>
+      <h4>Variables (non-sensitive — visible in logs)</h4>
+      <table class="file-table" style="margin-top:.75rem">
+        <tr><th>Name</th><th>Example value</th></tr>
+        <tr><td>AZURE_WEBAPP_NAME</td><td>familytree-api-prod</td></tr>
+        <tr><td>VITE_API_BASE_URL</td><td>https://familytree-api-prod.azurewebsites.net/api/v1</td></tr>
+        <tr><td>VITE_BLOB_CDN_BASE</td><td>https://familytree-ep-prod.azureedge.net</td></tr>
+        <tr><td>VITE_B2C_AUTHORITY</td><td>https://myfamilytree.b2clogin.com/myfamilytree.onmicrosoft.com/B2C_1_signupsignin</td></tr>
+        <tr><td>VITE_B2C_REDIRECT_URI</td><td>https://mango-tree-0a1b2c.azurestaticapps.net</td></tr>
+      </table>
+    </div>
+  </details>
+
+  <!-- Deploy steps -->
+  <h2 id="deploy-steps">Step-by-step First Deployment</h2>
+  <details open>
+    <summary>Complete guide from zero to running app</summary>
+    <div class="details-body">
+      <h4>1. Azure prerequisites</h4>
+      <pre>az login
+az group create -n familytree-rg-prod -l eastus2
+# Create Azure AD B2C tenant (manual: portal.azure.com → Create B2C tenant)
+# Register app in B2C, note ClientId and tenant domain</pre>
+
+      <h4>2. Deploy infrastructure (first pass — no allowedOrigin yet)</h4>
+      <pre>az deployment group create \
+  -g familytree-rg-prod \
+  -f infra/main.bicep \
+  --parameters \
+    environment=prod \
+    appName=familytree \
+    sqlAdminPassword='YourStrongPassword123!' \
+    b2cClientId='xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx' \
+    b2cDomain='myfamilytree'
+
+# Capture outputs:
+API_URL=$(az deployment group show -g familytree-rg-prod -n main --query properties.outputs.apiUrl.value -o tsv)
+SWA_URL=$(az deployment group show -g familytree-rg-prod -n main --query properties.outputs.staticWebAppUrl.value -o tsv)
+SWA_TOKEN=$(az deployment group show -g familytree-rg-prod -n main --query properties.outputs.staticWebAppDeployToken.value -o tsv)</pre>
+
+      <h4>3. Run EF migrations on Azure SQL</h4>
+      <pre>cd backend/FamilyTree.Api
+# Set connection string to Azure SQL
+dotnet ef database update \
+  --connection "Server=familytree-sql-prod.database.windows.net,1433;Database=familytreedb;..."</pre>
+
+      <h4>4. Configure GitHub secrets and variables</h4>
+      <pre>gh secret set AZURE_WEBAPP_PUBLISH_PROFILE &lt; publish-profile.xml
+gh secret set AZURE_STATIC_WEB_APPS_API_TOKEN --body "$SWA_TOKEN"
+gh secret set VITE_B2C_CLIENT_ID --body "your-b2c-client-id"
+
+gh variable set AZURE_WEBAPP_NAME --body "familytree-api-prod"
+gh variable set VITE_API_BASE_URL --body "$API_URL/api/v1"
+gh variable set VITE_BLOB_CDN_BASE --body "https://familytree-ep-prod.azureedge.net"
+gh variable set VITE_B2C_AUTHORITY --body "https://myfamilytree.b2clogin.com/..."
+gh variable set VITE_B2C_REDIRECT_URI --body "$SWA_URL"</pre>
+
+      <h4>5. Redeploy with CORS allowedOrigin (second pass)</h4>
+      <pre>az deployment group create \
+  -g familytree-rg-prod \
+  -f infra/main.bicep \
+  --parameters allowedOrigin="$SWA_URL" \
+  # ... (same other params)</pre>
+
+      <h4>6. Push to main → triggers CI/CD</h4>
+      <pre>git push origin main
+# backend-deploy.yml: runs 58 tests → deploys API
+# frontend-deploy.yml: type-checks → builds → deploys SPA</pre>
+    </div>
+  </details>
+
+  <!-- Design Decisions -->
+  <h2 id="decisions">Design Decisions</h2>
+
+  <details>
+    <summary>Why Standard_Microsoft CDN (classic) instead of Azure Front Door?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">Azure Front Door Standard/Premium is the modern recommendation but costs ~$35/month minimum. For a family tree app with modest photo traffic, Standard_Microsoft CDN (classic) at ~$0.087/GB outbound is sufficient. Migration to Front Door is straightforward later (same Blob origin).</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why partition Gremlin graph by /primaryTreeId?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">The vast majority of Gremlin traversals (expand node, get neighbours) stay within a single family tree. Partitioning by <code class="inline">primaryTreeId</code> keeps those queries within one physical partition, avoiding cross-partition fan-out and reducing RU costs. Cross-tree queries (surname link detection) are run by the background job on a timer and can tolerate the slightly higher RU cost of cross-partition reads.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why split build and deploy into two CI jobs?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">Splitting into two jobs means: (1) PRs run the build+test job but not the deploy job — saves deployment quota and avoids accidental deploys; (2) test results are uploaded as an artifact even when the build fails; (3) the deploy job has its own <code class="inline">environment: production</code> gate which can require a manual approval review in GitHub.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why skip_app_build: true in the SWA deploy action?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">Azure Static Web Apps deploy action uses Oryx to build the app by default. Oryx doesn't have access to our GitHub Secrets for <code class="inline">VITE_*</code> env vars, so a remote build would create a bundle with empty strings for all config. By building ourselves in the previous job (where secrets are available) and uploading <code class="inline">dist/</code>, then using <code class="inline">skip_app_build: true</code>, we guarantee the production config is baked into the bundle.</p>
+    </div>
+  </details>
+
+  <details>
+    <summary>Why is allowedOrigin empty on the first deploy?</summary>
+    <div class="details-body">
+      <p style="font-size:.85rem;line-height:1.6">The SWA hostname isn't known until after the first deploy creates the resource. The two-pass approach (deploy → capture URL → redeploy with CORS) is the standard Bicep pattern for circular dependency between resources. An alternative is to use a custom domain with a known hostname, which eliminates the two-pass requirement.</p>
+    </div>
+  </details>
+
+  <!-- Final Summary -->
+  <h2 id="project-complete">🎉 Project Complete — All Phases</h2>
+  <div class="alert ok" style="font-size:.88rem;line-height:1.7">
+    <strong>All 6 phases of the FamilyTree application are now complete:</strong><br/><br/>
+    <strong>Phase A</strong> — Backend Models/DTOs (14 C# record types)<br/>
+    <strong>Phase B</strong> — Backend Services (7 service classes — PersonService, TreeService, GraphTraversalService, SurnameRelationshipService, SearchService, UserService, AuditService)<br/>
+    <strong>Phase C</strong> — Backend Endpoints (6 endpoint files, 20 routes, role-gated auth)<br/>
+    <strong>Phase D</strong> — Backend Tests (58 tests — PersonEndpointTests, TreeEndpointTests, AuthorizationTests, SearchEndpointTests, AuditLogTests, HealthCheckTests)<br/>
+    <strong>Phase E</strong> — Frontend Scaffold (React 18 + TypeScript, 42 files, 20 components, 3 languages)<br/>
+    <strong>Phase F</strong> — Infrastructure &amp; CI/CD (5 Bicep templates, 2 GitHub Actions workflows)
+  </div>
+
+  <div class="alert info" style="margin-top:1rem;font-size:.83rem">
+    <strong>What's NOT in scope (Phase 1):</strong> GEDCOM import/export · Native mobile app · Email notifications · Version history/record revert · Dark mode toggle · Real Azure AD B2C tenant (local dev uses mock auth)
+  </div>
+
+</main>
+
+<script>
+function toggleTheme() {
+  const d = document.documentElement;
+  const isDark = d.getAttribute('data-theme') === 'dark';
+  d.setAttribute('data-theme', isDark ? '' : 'dark');
+  document.getElementById('theme-toggle').textContent = isDark ? '🌙 Dark' : '☀️ Light';
+}
+
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      document.querySelectorAll('#sidebar nav a').forEach(l => l.classList.remove('active'));
+      const a = document.querySelector('#sidebar nav a[href="#' + e.target.id + '"]');
+      if (a) a.classList.add('active');
+    }
+  });
+}, { rootMargin: '-20% 0px -70% 0px' });
+document.querySelectorAll('[id]').forEach(el => obs.observe(el));
+</script>
+</body>
+</html>

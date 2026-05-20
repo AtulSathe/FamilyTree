@@ -1,0 +1,96 @@
+name: Frontend CI/CD
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-deploy.yml'
+
+jobs:
+  # ── Build + Type-check ────────────────────────────────────────────────────────
+  build:
+    name: Build & Type-check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: TypeScript type-check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
+      - name: Build
+        working-directory: frontend
+        # Vite inlines VITE_* at build time — set these as GitHub Variables/Secrets.
+        # VITE_API_BASE_URL      → https://<api-app-name>.azurewebsites.net/api/v1
+        # VITE_BLOB_CDN_BASE     → https://<cdn-endpoint>.azureedge.net
+        # VITE_B2C_CLIENT_ID     → Azure AD B2C app registration client ID
+        # VITE_B2C_AUTHORITY     → https://<tenant>.b2clogin.com/<tenant>.onmicrosoft.com/B2C_1_signupsignin
+        # VITE_B2C_REDIRECT_URI  → https://<static-web-app-hostname>
+        env:
+          VITE_USE_MOCK:         'false'
+          VITE_API_BASE_URL:     ${{ vars.VITE_API_BASE_URL }}
+          VITE_BLOB_CDN_BASE:    ${{ vars.VITE_BLOB_CDN_BASE }}
+          VITE_B2C_CLIENT_ID:    ${{ secrets.VITE_B2C_CLIENT_ID }}
+          VITE_B2C_AUTHORITY:    ${{ vars.VITE_B2C_AUTHORITY }}
+          VITE_B2C_REDIRECT_URI: ${{ vars.VITE_B2C_REDIRECT_URI }}
+        run: npm run build
+
+      - name: Upload dist artifact
+        if: github.event_name == 'push'
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+          retention-days: 1
+
+  # ── Deploy to Azure Static Web Apps ──────────────────────────────────────────
+  deploy:
+    name: Deploy to Azure Static Web Apps
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+
+    steps:
+      - name: Checkout
+        # Required by the static-web-apps-deploy action to read repo metadata
+        uses: actions/checkout@v4
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: frontend-dist
+          path: frontend/dist
+
+      - name: Deploy to Azure Static Web Apps
+        uses: Azure/static-web-apps-deploy@v1
+        with:
+          # Set AZURE_STATIC_WEB_APPS_API_TOKEN in repo Settings → Secrets → Actions
+          # Retrieve from: Azure Portal → Static Web App → Manage deployment token
+          # Or from Bicep output: staticWebAppDeployToken
+          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
+          repo_token:                       ${{ secrets.GITHUB_TOKEN }}
+          action:                           upload
+          app_location:                     frontend
+          output_location:                  dist
+          # Skip Oryx build — we built ourselves in the previous job
+          skip_app_build:                   true

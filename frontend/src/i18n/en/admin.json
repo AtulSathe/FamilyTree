@@ -1,0 +1,17 @@
+{
+  "auditLog": "Audit Log",
+  "users": "Users",
+  "role": "Role",
+  "roles": {
+    "power_admin": "Power Admin",
+    "family_admin": "Family Admin",
+    "community_member": "Community Member"
+  },
+  "changeRole": "Change Role",
+  "deleteUser": "Delete User",
+  "action": "Action",
+  "entity": "Entity",
+  "changedAt": "Changed At",
+  "oldValue": "Old Value",
+  "newValue": "New Value"
+}

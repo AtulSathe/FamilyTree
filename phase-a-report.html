@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase A Report — FamilyTree Backend Models</title>
+<style>
+  :root {
+    --bg: #f8f9fa; --sidebar-bg: #1e293b; --sidebar-text: #94a3b8;
+    --sidebar-active: #38bdf8; --card-bg: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --text-muted: #64748b; --accent: #0ea5e9;
+    --success: #22c55e; --warn: #f59e0b; --error: #ef4444;
+    --code-bg: #1e293b; --code-text: #e2e8f0;
+    --timeline-line: #cbd5e1; --tag-bg: #e0f2fe; --tag-text: #0369a1;
+  }
+  [data-theme="dark"] {
+    --bg: #0f172a; --sidebar-bg: #020617; --sidebar-text: #64748b;
+    --sidebar-active: #38bdf8; --card-bg: #1e293b; --border: #334155;
+    --text: #e2e8f0; --text-muted: #94a3b8; --accent: #38bdf8;
+    --code-bg: #0f172a; --code-text: #e2e8f0;
+    --timeline-line: #334155; --tag-bg: #0c4a6e; --tag-text: #38bdf8;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); display: flex; min-height: 100vh; }
+  /* Sidebar */
+  #sidebar {
+    width: 260px; min-height: 100vh; background: var(--sidebar-bg); color: var(--sidebar-text);
+    position: fixed; top: 0; left: 0; overflow-y: auto; z-index: 100;
+    display: flex; flex-direction: column;
+  }
+  #sidebar .logo { padding: 24px 20px 16px; border-bottom: 1px solid #334155; }
+  #sidebar .logo h1 { font-size: 1rem; font-weight: 700; color: #f1f5f9; letter-spacing: .5px; }
+  #sidebar .logo span { font-size: .75rem; color: var(--sidebar-text); }
+  #sidebar nav { padding: 12px 0; flex: 1; }
+  #sidebar nav a {
+    display: flex; align-items: center; gap: 10px; padding: 9px 20px;
+    color: var(--sidebar-text); text-decoration: none; font-size: .85rem;
+    transition: background .15s, color .15s; border-left: 3px solid transparent;
+  }
+  #sidebar nav a:hover, #sidebar nav a.active {
+    background: rgba(56,189,248,.1); color: var(--sidebar-active);
+    border-left-color: var(--sidebar-active);
+  }
+  #sidebar nav .section-label {
+    padding: 16px 20px 6px; font-size: .7rem; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 1px; color: #475569;
+  }
+  /* Main */
+  #main { margin-left: 260px; flex: 1; padding: 32px 40px; max-width: 1100px; }
+  /* Header */
+  .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 32px; flex-wrap: wrap; gap: 16px; }
+  .page-header h2 { font-size: 1.6rem; font-weight: 700; }
+  .page-header .meta { font-size: .85rem; color: var(--text-muted); margin-top: 4px; }
+  /* Theme toggle */
+  #theme-toggle {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 7px 14px; cursor: pointer; font-size: .85rem; color: var(--text); display: flex; align-items: center; gap: 6px;
+  }
+  /* Status badges */
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 10px; border-radius: 999px; font-size: .75rem; font-weight: 600;
+  }
+  .badge-success { background: #dcfce7; color: #166534; }
+  .badge-warn    { background: #fef9c3; color: #854d0e; }
+  .badge-info    { background: var(--tag-bg); color: var(--tag-text); }
+  [data-theme="dark"] .badge-success { background: #14532d; color: #86efac; }
+  [data-theme="dark"] .badge-warn    { background: #422006; color: #fde68a; }
+  /* Summary cards */
+  .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .summary-card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .summary-card .val { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .summary-card .lbl { font-size: .8rem; color: var(--text-muted); }
+  /* Section cards */
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 24px; overflow: hidden;
+  }
+  .card-header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; cursor: pointer;
+    user-select: none;
+  }
+  .card-header h3 { font-size: 1rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+  .card-header .chevron { transition: transform .2s; color: var(--text-muted); }
+  .card-header.open .chevron { transform: rotate(180deg); }
+  .card-body { padding: 20px; }
+  .card-body.hidden { display: none; }
+  /* Timeline */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 8px; top: 8px; bottom: 8px;
+    width: 2px; background: var(--timeline-line);
+  }
+  .tl-item { position: relative; margin-bottom: 20px; }
+  .tl-dot {
+    position: absolute; left: -24px; top: 4px;
+    width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg);
+  }
+  .tl-dot.success { background: var(--success); }
+  .tl-dot.warn    { background: var(--warn); }
+  .tl-time { font-size: .72rem; color: var(--text-muted); margin-bottom: 3px; }
+  .tl-title { font-size: .9rem; font-weight: 600; color: var(--text); }
+  .tl-desc  { font-size: .82rem; color: var(--text-muted); margin-top: 3px; line-height: 1.5; }
+  /* File list */
+  .file-list { display: flex; flex-direction: column; gap: 8px; }
+  .file-item {
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .file-icon { font-size: 1.1rem; }
+  .file-name { font-size: .85rem; font-weight: 600; font-family: monospace; color: var(--accent); flex: 1; }
+  .file-desc { font-size: .78rem; color: var(--text-muted); }
+  /* Code blocks */
+  pre {
+    background: var(--code-bg); color: var(--code-text); border-radius: 10px;
+    padding: 18px 20px; overflow-x: auto; font-size: .82rem; line-height: 1.65;
+    font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    margin: 0; white-space: pre;
+  }
+  code { font-family: inherit; }
+  .kw  { color: #c792ea; } /* keyword */
+  .ty  { color: #82aaff; } /* type */
+  .st  { color: #c3e88d; } /* string */
+  .cm  { color: #546e7a; font-style: italic; } /* comment */
+  .ns  { color: #89ddff; } /* namespace */
+  .at  { color: #ffcb6b; } /* attribute */
+  .nm  { color: #f78c6c; } /* name */
+  .op  { color: #89ddff; } /* operator */
+  /* Decision table */
+  table { width: 100%; border-collapse: collapse; font-size: .83rem; }
+  th { background: var(--bg); padding: 10px 14px; text-align: left; font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .5px; color: var(--text-muted); border-bottom: 2px solid var(--border); }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td code { background: var(--bg); padding: 2px 6px; border-radius: 4px; font-size: .8rem; }
+  /* Build result */
+  .build-box {
+    background: var(--code-bg); border-radius: 10px; padding: 16px 20px;
+    font-family: monospace; font-size: .8rem; color: var(--code-text); line-height: 1.6;
+  }
+  .build-ok  { color: #4ade80; font-weight: 700; }
+  .build-err { color: #f87171; font-weight: 700; }
+  .build-warn { color: #fbbf24; }
+  /* Next steps */
+  .next-card {
+    background: linear-gradient(135deg, #0ea5e920 0%, #6366f120 100%);
+    border: 1px solid var(--accent); border-radius: 12px; padding: 20px 24px;
+  }
+  .next-card h3 { font-size: 1rem; font-weight: 700; margin-bottom: 10px; color: var(--accent); }
+  .next-card ul { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+  .next-card ul li::before { content: '→ '; color: var(--accent); font-weight: 700; }
+  .next-card ul li { font-size: .87rem; }
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+  /* Responsive */
+  @media (max-width: 768px) {
+    #sidebar { width: 100%; min-height: auto; position: static; }
+    #main { margin-left: 0; padding: 20px; }
+    body { flex-direction: column; }
+  }
+</style>
+</head>
+<body data-theme="light">
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="logo">
+    <h1>🌳 FamilyTree</h1>
+    <span>Build Report</span>
+  </div>
+  <nav>
+    <div class="section-label">Phase A</div>
+    <a href="#summary" class="active">📊 Summary</a>
+    <a href="#timeline">⏱ Timeline</a>
+    <a href="#files-created">📁 Files Created</a>
+    <a href="#decisions">🧠 Decisions</a>
+    <a href="#code-samples">💻 Code Samples</a>
+    <a href="#build">🔨 Build Result</a>
+    <a href="#assumptions">⚠️ Assumptions</a>
+    <a href="#next">▶️ Next Step</a>
+  </nav>
+</aside>
+
+<!-- MAIN -->
+<main id="main">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div style="font-size:.75rem;color:var(--text-muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">
+        Phase A — Completed
+      </div>
+      <h2>Backend: Models / DTOs</h2>
+      <div class="meta">FamilyTree.Api &nbsp;·&nbsp; 2026-05-20 &nbsp;·&nbsp;
+        <span class="badge badge-success">✓ Build Passed</span>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark mode</button>
+  </div>
+
+  <!-- Summary cards -->
+  <section id="summary">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="val">17</div>
+        <div class="lbl">DTO files created</div>
+      </div>
+      <div class="summary-card">
+        <div class="val">0</div>
+        <div class="lbl">Build errors</div>
+      </div>
+      <div class="summary-card">
+        <div class="val">2</div>
+        <div class="lbl">Pre-existing warnings</div>
+      </div>
+      <div class="summary-card">
+        <div class="val">6</div>
+        <div class="lbl">API surface areas covered</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section id="timeline">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>⏱ Timeline of Actions</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-time">Step 1</div>
+            <div class="tl-title">Read domain entities</div>
+            <div class="tl-desc">Read all 8 domain classes (Person, PersonDetail, FamilyTree, User, SurnameLink, AuditLog, PersonTreeMembership, FamilyTreeAdmin) to derive exact field names, nullability, and relationships before writing any DTO.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 2</div>
+            <div class="tl-title">Created Models/ directory — Person group</div>
+            <div class="tl-desc">JobDto.cs · PersonResponse.cs · PersonDetailResponse.cs · CreatePersonRequest.cs · UpdatePersonRequest.cs · PhotoUploadUrlResponse.cs — 6 files covering FR-01, FR-03, FR-14.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 3</div>
+            <div class="tl-title">Created Tree / Relationship group</div>
+            <div class="tl-desc">FamilyTreeResponse.cs · CreateTreeRequest.cs · TreeNodeResponse.cs · RelationDto.cs · CreateRelationshipRequest.cs — 5 files covering FR-05, FR-06, FR-09, FR-10.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 4</div>
+            <div class="tl-title">Created Surnames / Search group</div>
+            <div class="tl-desc">SurnameResponse.cs · SurnameLinkResponse.cs · SearchResultDto.cs — 3 files covering FR-07, FR-08, FR-11.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 5</div>
+            <div class="tl-title">Created Admin group</div>
+            <div class="tl-desc">UserResponse.cs · UpdateRoleRequest.cs · AuditLogResponse.cs — 3 files covering admin user management and FR-13 audit log.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 6</div>
+            <div class="tl-title">Build verification</div>
+            <div class="tl-desc">Ran <code>dotnet build FamilyTree.Api.csproj</code> via full path (dotnet not on PATH). Result: 0 errors, 2 pre-existing NU1902 warnings (Microsoft.Identity.Web advisory — unrelated to this work).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Files Created -->
+  <section id="files-created">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>📁 Files Created (17)</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:16px;">
+          All files in <code>backend/FamilyTree.Api/Models/</code> &nbsp;·&nbsp; Namespace: <code>FamilyTree.Api.Models</code>
+        </p>
+        <div class="file-list">
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">JobDto.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">Job history entry — Title, Company, StartMMYYYY, EndMMYYYY</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">PersonResponse.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">Flat person summary for canvas node + search cards (9 fields)</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">PersonDetailResponse.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">Full detail for PersonDetailPage — includes Jobs list + CustomFields dict</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">CreatePersonRequest.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">POST /persons — FullName + TreeId required; Role defaults to "member"</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">UpdatePersonRequest.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">PUT /persons/{id} — all fields optional; no TreeId (membership managed separately)</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">PhotoUploadUrlResponse.cs</span><span class="badge badge-info">Person</span><span class="file-desc" style="margin-left:8px;">POST photo-upload-url → SasUrl + BlobName (FR-14)</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">FamilyTreeResponse.cs</span><span class="badge badge-warn">Tree</span><span class="file-desc" style="margin-left:8px;">GET /trees — Id, Surname, Description, MemberCount</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">CreateTreeRequest.cs</span><span class="badge badge-warn">Tree</span><span class="file-desc" style="margin-left:8px;">POST /trees — Surname required, Description optional</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">RelationDto.cs</span><span class="badge badge-warn">Tree</span><span class="file-desc" style="margin-left:8px;">Neighbour node entry — PersonId, FullName, PhotoBlobUrl, RelationshipType, Direction</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">TreeNodeResponse.cs</span><span class="badge badge-warn">Tree</span><span class="file-desc" style="margin-left:8px;">GET /trees/{id}/node/{pid} — focal PersonResponse + neighbour Relations list</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">CreateRelationshipRequest.cs</span><span class="badge badge-warn">Tree</span><span class="file-desc" style="margin-left:8px;">POST /trees/{id}/relationships — PersonAId, PersonBId, RelationshipType</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">SurnameResponse.cs</span><span class="badge badge-success">Surname</span><span class="file-desc" style="margin-left:8px;">GET /surnames — Surname, TreeId, MemberCount</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">SurnameLinkResponse.cs</span><span class="badge badge-success">Surname</span><span class="file-desc" style="margin-left:8px;">Cross-tree link — SurnameA, SurnameB, bridge person, hop count</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">SearchResultDto.cs</span><span class="badge badge-info">Search</span><span class="file-desc" style="margin-left:8px;">GET /search — PersonId, FullName, Location, Birth, Photo, TreeId, Surname</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">UserResponse.cs</span><span class="badge badge-warn">Admin</span><span class="file-desc" style="margin-left:8px;">Admin user list — Id, Email, FullName, Role</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">UpdateRoleRequest.cs</span><span class="badge badge-warn">Admin</span><span class="file-desc" style="margin-left:8px;">PUT /admin/users/{id}/role — validated Role string</span></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">AuditLogResponse.cs</span><span class="badge badge-warn">Admin</span><span class="file-desc" style="margin-left:8px;">GET /admin/audit-log — all 8 AuditLog fields including raw JSON snapshots</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Decisions -->
+  <section id="decisions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>🧠 Design Decisions</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Decision</th><th>Reasoning</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>record</code> types for all DTOs</td>
+              <td>CLAUDE.md coding conventions explicitly require record types for DTOs. Records are immutable and get value-equality for free — ideal for HTTP response/request objects.</td>
+            </tr>
+            <tr>
+              <td><code>PersonDetailResponse</code> is a separate record, not inheriting <code>PersonResponse</code></td>
+              <td>C# positional records do not support constructor inheritance. A flat record with all fields is cleaner than a workaround with a non-positional base. Both share the same 9 base fields by repetition.</td>
+            </tr>
+            <tr>
+              <td><code>Jobs</code> typed as <code>List&lt;JobDto&gt;</code>, not raw JSON string</td>
+              <td>The domain stores Jobs as a JSON string for EF Core compatibility. The DTO layer deserialises to a typed list so the frontend gets a proper array — the service layer will handle the serialisation boundary.</td>
+            </tr>
+            <tr>
+              <td><code>CustomFields</code> typed as <code>Dictionary&lt;string, object?&gt;</code></td>
+              <td>The extended_fields/CustomFields columns are arbitrary JSON. A dictionary preserves the open-ended nature while still being serialisable by System.Text.Json.</td>
+            </tr>
+            <tr>
+              <td><code>UpdatePersonRequest</code> excludes <code>TreeId</code></td>
+              <td>Tree membership is managed separately via <code>POST/DELETE /trees/{treeId}/members/{personId}</code>. Including TreeId in an update would conflate person data with membership data.</td>
+            </tr>
+            <tr>
+              <td><code>RelationDto.Direction</code> field (<code>in | out | both</code>)</td>
+              <td>Gremlin edges are directed. The frontend needs to know directionality to render edges correctly (e.g. parent_of vs child_of visually look different). <code>both</code> is used for spouse/sibling edges that are always bidirectional.</td>
+            </tr>
+            <tr>
+              <td><code>[Required]</code> on request records instead of nullable</td>
+              <td>Non-nullable positional record parameters are already implicitly required for model binding. Adding <code>[Required]</code> makes the validation intent explicit in Swagger and enables automatic 400 responses from the minimal API validation pipeline.</td>
+            </tr>
+            <tr>
+              <td><code>SearchResultDto</code> includes <code>PhotoBlobUrl</code></td>
+              <td>The plan didn't specify it but FR-11 says search returns a "person card with tree/surname context". The PersonCard component will need the photo to render correctly — adding it here avoids a second round-trip.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code Samples -->
+  <section id="code-samples">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>💻 Code Samples — Key Files</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body" style="display:flex;flex-direction:column;gap:20px;">
+
+        <div>
+          <p style="font-size:.82rem;font-weight:600;margin-bottom:8px;color:var(--text-muted);">PersonDetailResponse.cs</p>
+<pre><code><span class="kw">namespace</span> <span class="ns">FamilyTree.Api.Models</span>;
+
+<span class="kw">public record</span> <span class="ty">PersonDetailResponse</span>(
+    <span class="ty">Guid</span> <span class="nm">Id</span>,
+    <span class="ty">string</span> <span class="nm">FullName</span>,
+    <span class="ty">string</span>? <span class="nm">NameBefore</span>,
+    <span class="ty">string</span>? <span class="nm">Phone</span>,
+    <span class="ty">string</span>? <span class="nm">Location</span>,
+    <span class="ty">string</span>? <span class="nm">BirthMonthYear</span>,
+    <span class="ty">string</span>? <span class="nm">DeathMonthYear</span>,
+    <span class="ty">string</span>? <span class="nm">PhotoBlobUrl</span>,
+    <span class="ty">Guid</span>? <span class="nm">PrimaryTreeId</span>,
+    <span class="ty">string</span>? <span class="nm">Hobbies</span>,
+    <span class="ty">string</span>? <span class="nm">Education</span>,
+    <span class="ty">string</span>? <span class="nm">Skills</span>,
+    <span class="ty">List</span>&lt;<span class="ty">JobDto</span>&gt; <span class="nm">Jobs</span>,
+    <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">object</span>?&gt;? <span class="nm">CustomFields</span>
+);</code></pre>
+        </div>
+
+        <div>
+          <p style="font-size:.82rem;font-weight:600;margin-bottom:8px;color:var(--text-muted);">CreatePersonRequest.cs</p>
+<pre><code><span class="kw">using</span> <span class="ns">System.ComponentModel.DataAnnotations</span>;
+
+<span class="kw">namespace</span> <span class="ns">FamilyTree.Api.Models</span>;
+
+<span class="kw">public record</span> <span class="ty">CreatePersonRequest</span>(
+    [<span class="at">Required</span>] <span class="ty">string</span> <span class="nm">FullName</span>,
+    <span class="ty">string</span>? <span class="nm">NameBefore</span>,
+    <span class="ty">string</span>? <span class="nm">Phone</span>,
+    <span class="ty">string</span>? <span class="nm">Location</span>,
+    <span class="ty">string</span>? <span class="nm">BirthMonthYear</span>,
+    <span class="ty">string</span>? <span class="nm">DeathMonthYear</span>,
+    [<span class="at">Required</span>] <span class="ty">Guid</span> <span class="nm">TreeId</span>,
+    <span class="ty">string</span> <span class="nm">Role</span> <span class="op">=</span> <span class="st">"member"</span>   <span class="cm">// member | married_in | admin_linked</span>
+);</code></pre>
+        </div>
+
+        <div>
+          <p style="font-size:.82rem;font-weight:600;margin-bottom:8px;color:var(--text-muted);">TreeNodeResponse.cs + RelationDto.cs</p>
+<pre><code><span class="kw">namespace</span> <span class="ns">FamilyTree.Api.Models</span>;
+
+<span class="kw">public record</span> <span class="ty">TreeNodeResponse</span>(
+    <span class="ty">PersonResponse</span> <span class="nm">Person</span>,
+    <span class="ty">List</span>&lt;<span class="ty">RelationDto</span>&gt; <span class="nm">Relations</span>
+);
+
+<span class="kw">public record</span> <span class="ty">RelationDto</span>(
+    <span class="ty">Guid</span>   <span class="nm">PersonId</span>,
+    <span class="ty">string</span> <span class="nm">FullName</span>,
+    <span class="ty">string</span>? <span class="nm">PhotoBlobUrl</span>,
+    <span class="ty">string</span> <span class="nm">RelationshipType</span>,
+    <span class="ty">string</span> <span class="nm">Direction</span>   <span class="cm">// in | out | both</span>
+);</code></pre>
+        </div>
+
+        <div>
+          <p style="font-size:.82rem;font-weight:600;margin-bottom:8px;color:var(--text-muted);">SearchResultDto.cs</p>
+<pre><code><span class="kw">namespace</span> <span class="ns">FamilyTree.Api.Models</span>;
+
+<span class="kw">public record</span> <span class="ty">SearchResultDto</span>(
+    <span class="ty">Guid</span>   <span class="nm">PersonId</span>,
+    <span class="ty">string</span> <span class="nm">FullName</span>,
+    <span class="ty">string</span>? <span class="nm">Location</span>,
+    <span class="ty">string</span>? <span class="nm">BirthMonthYear</span>,
+    <span class="ty">string</span>? <span class="nm">PhotoBlobUrl</span>,
+    <span class="ty">Guid</span>   <span class="nm">TreeId</span>,
+    <span class="ty">string</span> <span class="nm">Surname</span>
+);</code></pre>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Build Result -->
+  <section id="build">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>🔨 Build Result</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <div class="build-box">
+<span style="color:#94a3b8;">$ & "C:\Program Files\dotnet\dotnet.exe" build FamilyTree.Api.csproj</span>
+
+  Determining projects to restore...
+  Restored FamilyTree.Api.csproj (in 29.73 sec).
+<span class="build-warn">  warning NU1902: Package 'Microsoft.Identity.Web' 3.3.0 has a known
+          moderate severity vulnerability (pre-existing — not introduced by
+          this change)</span>
+  FamilyTree.Api -> bin\Debug\net8.0\FamilyTree.Api.dll
+
+<span class="build-ok">Build succeeded.</span>
+
+  2 Warning(s)  <span style="color:#94a3b8;">← pre-existing NU1902, unrelated to Models</span>
+  <span class="build-ok">0 Error(s)</span>
+
+Time Elapsed 00:00:40.42
+        </div>
+        <p style="font-size:.8rem;color:var(--text-muted);margin-top:12px;">
+          <strong>Note:</strong> <code>dotnet</code> is installed at <code>C:\Program Files\dotnet\dotnet.exe</code> but is not on the system PATH.
+          Added to internal knowledge for subsequent phases.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Assumptions -->
+  <section id="assumptions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)">
+        <h3>⚠️ Assumptions Made</h3>
+        <span class="chevron">▼</span>
+      </div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Assumption</th><th>Rationale / Risk</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>PersonDetailResponse</code> does not inherit <code>PersonResponse</code></td>
+              <td>Positional record inheritance is not supported in C#. Low risk — both return the same base fields; services will project them identically.</td>
+            </tr>
+            <tr>
+              <td>Jobs deserialised to <code>List&lt;JobDto&gt;</code> in the DTO layer (not raw JSON)</td>
+              <td>Services will call <code>JsonSerializer.Deserialize&lt;List&lt;JobDto&gt;&gt;(person.Detail.Jobs)</code>. If the DB value is null the service will return an empty list.</td>
+            </tr>
+            <tr>
+              <td><code>SearchResultDto</code> includes <code>PhotoBlobUrl</code> (not in original plan)</td>
+              <td>FR-11 specifies a "person card" in results. PersonCard component needs the photo. Risk: negligible — only adds one field to the search query join.</td>
+            </tr>
+            <tr>
+              <td>Role validation in request DTOs uses string, not an enum</td>
+              <td>The domain stores roles as strings (to match Azure AD B2C JWT claims). Using an enum here would require a custom JSON converter. Services will validate allowed values.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Next Step -->
+  <section id="next">
+    <div class="next-card">
+      <h3>▶️ Awaiting Approval — Phase B: Services</h3>
+      <ul>
+        <li>Create <code>backend/FamilyTree.Api/Services/</code> directory</li>
+        <li><strong>AuditService.cs</strong> — log every mutation to AuditLog table</li>
+        <li><strong>PersonService.cs</strong> — CRUD + photo SAS URL + Cosmos vertex sync</li>
+        <li><strong>TreeService.cs</strong> — list trees, create tree, graph node expansion, relationships, membership</li>
+        <li><strong>GraphTraversalService.cs</strong> — Gremlin neighbour traversal + shortest-path BFS</li>
+        <li><strong>SurnameRelationshipService.cs</strong> — surname list, cross-links, recent member</li>
+        <li><strong>SearchService.cs</strong> — EF LIKE query across persons + tree join</li>
+        <li><strong>UserService.cs</strong> — admin user CRUD + role assignment</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  function toggleTheme() {
+    const body = document.body;
+    const btn = document.getElementById('theme-toggle');
+    if (body.dataset.theme === 'dark') {
+      body.dataset.theme = 'light'; btn.textContent = '🌙 Dark mode';
+    } else {
+      body.dataset.theme = 'dark'; btn.textContent = '☀️ Light mode';
+    }
+  }
+  function toggleCard(header) {
+    header.classList.toggle('open');
+    header.nextElementSibling.classList.toggle('hidden');
+  }
+  // Sidebar active link on scroll
+  const sections = document.querySelectorAll('section[id]');
+  const links = document.querySelectorAll('#sidebar nav a');
+  window.addEventListener('scroll', () => {
+    let current = '';
+    sections.forEach(s => { if (window.scrollY >= s.offsetTop - 80) current = s.id; });
+    links.forEach(l => {
+      l.classList.remove('active');
+      if (l.getAttribute('href') === '#' + current) l.classList.add('active');
+    });
+  }, { passive: true });
+</script>
+</body>
+</html>

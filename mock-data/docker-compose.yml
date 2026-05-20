@@ -1,0 +1,47 @@
+version: "3.9"
+
+services:
+  # Azure SQL substitute — full T-SQL compatibility
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "FamilyTree_Dev#2024"
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqldata:/var/opt/mssql
+    healthcheck:
+      test: /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "FamilyTree_Dev#2024" -Q "SELECT 1" || exit 1
+      interval: 10s
+      retries: 10
+
+  # Gremlin Server — Apache TinkerPop (Cosmos DB Gremlin API compatible queries)
+  gremlin:
+    image: tinkerpop/gremlin-server:3.7.1
+    ports:
+      - "8182:8182"
+    volumes:
+      - ./gremlin/seed.groovy:/opt/gremlin-server/scripts/seed.groovy
+      - ./gremlin/gremlin-server.yaml:/opt/gremlin-server/conf/gremlin-server.yaml
+      - ./gremlin/tinkergraph-empty.properties:/opt/gremlin-server/conf/tinkergraph-empty.properties
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8182"]
+      interval: 15s
+      retries: 8
+
+  # Azurite — Azure Blob Storage emulator
+  azurite:
+    image: mcr.microsoft.com/azure-storage/azurite:latest
+    ports:
+      - "10000:10000"   # Blob
+      - "10001:10001"   # Queue
+      - "10002:10002"   # Table
+    volumes:
+      - azuritedata:/data
+    command: azurite --blobHost 0.0.0.0 --loose
+
+volumes:
+  sqldata:
+  azuritedata:

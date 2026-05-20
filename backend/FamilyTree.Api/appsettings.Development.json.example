@@ -1,0 +1,20 @@
+{
+  "USE_MOCK_AUTH": true,
+  "AzureSQL": {
+    "ConnectionString": "Server=localhost,1433;Database=FamilyTreeDev;User Id=sa;Password=FamilyTree_Dev#2024;TrustServerCertificate=true"
+  },
+  "CosmosDb": {
+    "GremlinEndpoint": "localhost",
+    "GremlinPort": 8182,
+    "GremlinUsername": "/dbs/familytree/colls/relationships",
+    "GremlinPassword": "",
+    "Database": "familytree",
+    "Container": "relationships",
+    "EnableSsl": false
+  },
+  "AzureBlob": {
+    "ConnectionString": "UseDevelopmentStorage=true",
+    "ContainerName": "person-photos",
+    "CdnBaseUrl": "http://127.0.0.1:10000/devstoreaccount1"
+  }
+}

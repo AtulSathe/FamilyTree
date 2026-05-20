@@ -1,0 +1,21 @@
+{
+  "appName": "Family Tree",
+  "search": "Search",
+  "searchPlaceholder": "Search by name…",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "back": "Back",
+  "loading": "Loading…",
+  "noResults": "No results found",
+  "error": "Something went wrong",
+  "surnames": "Surnames",
+  "surnameRelationships": "Surname Relationships",
+  "languages": {
+    "en": "English",
+    "hi": "हिंदी",
+    "mr": "मराठी"
+  }
+}

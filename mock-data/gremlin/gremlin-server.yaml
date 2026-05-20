@@ -1,0 +1,27 @@
+host: 0.0.0.0
+port: 8182
+scriptEngines:
+  gremlin-groovy:
+    plugins:
+      org.apache.tinkerpop.gremlin.server.jsr223.GremlinServerGremlinPlugin:
+        {}
+      org.apache.tinkerpop.gremlin.tinkergraph.jsr223.TinkerGraphGremlinPlugin:
+        {}
+      org.apache.tinkerpop.gremlin.jsr223.ImportGremlinPlugin:
+        classImports:
+          - java.lang.Math
+        methodImports:
+          - java.lang.Math#*
+      org.apache.tinkerpop.gremlin.jsr223.ScriptFileGremlinPlugin:
+        files: [scripts/seed.groovy]
+graphs:
+  graph: conf/tinkergraph-empty.properties
+serializers:
+  - { className: org.apache.tinkerpop.gremlin.driver.ser.GraphSONMessageSerializerV2d0,
+      config: { ioRegistries: [org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerIoRegistryV2d0] } }
+  - { className: org.apache.tinkerpop.gremlin.driver.ser.GryoMessageSerializerV3d0,
+      config: { ioRegistries: [org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerIoRegistryV3d0] } }
+metrics:
+  slf4jReporter:
+    enabled: true
+    interval: 180000

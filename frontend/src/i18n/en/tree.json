@@ -1,0 +1,20 @@
+{
+  "familyTrees": "Family Trees",
+  "members": "members",
+  "expand": "Expand node",
+  "collapse": "Collapse node",
+  "addRelationship": "Add Relationship",
+  "relationshipTypes": {
+    "spouse": "Spouse",
+    "parent_of": "Parent",
+    "child_of": "Child",
+    "sibling_of": "Sibling",
+    "in_law_of": "In-Law",
+    "step_parent_of": "Step-Parent",
+    "adoptive_parent_of": "Adoptive Parent"
+  },
+  "noTreeSelected": "Select a family from the sidebar to view the tree",
+  "zoomIn": "Zoom in",
+  "zoomOut": "Zoom out",
+  "fitView": "Fit view"
+}

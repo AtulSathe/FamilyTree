@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase C Report — FamilyTree Endpoints & Program.cs</title>
+<style>
+  :root{--bg:#f8f9fa;--sidebar-bg:#1e293b;--sidebar-text:#94a3b8;--sidebar-active:#38bdf8;--card-bg:#ffffff;--border:#e2e8f0;--text:#1e293b;--text-muted:#64748b;--accent:#0ea5e9;--success:#22c55e;--warn:#f59e0b;--code-bg:#1e293b;--code-text:#e2e8f0;--timeline-line:#cbd5e1;--tag-bg:#e0f2fe;--tag-text:#0369a1}
+  [data-theme="dark"]{--bg:#0f172a;--sidebar-bg:#020617;--sidebar-text:#64748b;--sidebar-active:#38bdf8;--card-bg:#1e293b;--border:#334155;--text:#e2e8f0;--text-muted:#94a3b8;--accent:#38bdf8;--code-bg:#0f172a;--code-text:#e2e8f0;--timeline-line:#334155;--tag-bg:#0c4a6e;--tag-text:#38bdf8}
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+  #sidebar{width:260px;min-height:100vh;background:var(--sidebar-bg);color:var(--sidebar-text);position:fixed;top:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column}
+  #sidebar .logo{padding:24px 20px 16px;border-bottom:1px solid #334155}
+  #sidebar .logo h1{font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:.5px}
+  #sidebar .logo span{font-size:.75rem;color:var(--sidebar-text)}
+  #sidebar nav{padding:12px 0;flex:1}
+  #sidebar nav a{display:flex;align-items:center;gap:10px;padding:9px 20px;color:var(--sidebar-text);text-decoration:none;font-size:.85rem;transition:background .15s,color .15s;border-left:3px solid transparent}
+  #sidebar nav a:hover,#sidebar nav a.active{background:rgba(56,189,248,.1);color:var(--sidebar-active);border-left-color:var(--sidebar-active)}
+  #sidebar nav .section-label{padding:16px 20px 6px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#475569}
+  #main{margin-left:260px;flex:1;padding:32px 40px;max-width:1140px}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px}
+  .page-header h2{font-size:1.6rem;font-weight:700}
+  .page-header .meta{font-size:.85rem;color:var(--text-muted);margin-top:4px}
+  #theme-toggle{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.85rem;color:var(--text);display:flex;align-items:center;gap:6px}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:600}
+  .badge-success{background:#dcfce7;color:#166534}.badge-warn{background:#fef9c3;color:#854d0e}
+  .badge-info{background:var(--tag-bg);color:var(--tag-text)}.badge-red{background:#fee2e2;color:#991b1b}
+  .badge-purple{background:#f3e8ff;color:#6b21a8}
+  [data-theme="dark"] .badge-success{background:#14532d;color:#86efac}
+  [data-theme="dark"] .badge-warn{background:#422006;color:#fde68a}
+  [data-theme="dark"] .badge-red{background:#450a0a;color:#fca5a5}
+  [data-theme="dark"] .badge-purple{background:#3b0764;color:#d8b4fe}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+  .summary-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+  .summary-card .val{font-size:2rem;font-weight:800;color:var(--accent)}
+  .summary-card .lbl{font-size:.8rem;color:var(--text-muted)}
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:24px;overflow:hidden}
+  .card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .card-header h3{font-size:1rem;font-weight:600;display:flex;align-items:center;gap:10px}
+  .card-header .chevron{transition:transform .2s;color:var(--text-muted)}
+  .card-header.open .chevron{transform:rotate(180deg)}
+  .card-body{padding:20px}
+  .card-body.hidden{display:none}
+  .timeline{position:relative;padding-left:28px}
+  .timeline::before{content:'';position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--timeline-line)}
+  .tl-item{position:relative;margin-bottom:20px}
+  .tl-dot{position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+  .tl-dot.success{background:var(--success)}.tl-dot.warn{background:var(--warn)}
+  .tl-time{font-size:.72rem;color:var(--text-muted);margin-bottom:3px}
+  .tl-title{font-size:.9rem;font-weight:600;color:var(--text)}
+  .tl-desc{font-size:.82rem;color:var(--text-muted);margin-top:3px;line-height:1.5}
+  .file-list{display:flex;flex-direction:column;gap:8px}
+  .file-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px}
+  .file-icon{font-size:1.1rem;margin-top:1px}.file-name{font-size:.85rem;font-weight:600;font-family:monospace;color:var(--accent);min-width:220px}
+  .file-desc{font-size:.78rem;color:var(--text-muted);line-height:1.5}
+  pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:18px 20px;overflow-x:auto;font-size:.8rem;line-height:1.65;font-family:'Cascadia Code','Fira Code','Consolas',monospace;margin:0;white-space:pre}
+  .kw{color:#c792ea}.ty{color:#82aaff}.st{color:#c3e88d}.cm{color:#546e7a;font-style:italic}
+  .ns{color:#89ddff}.at{color:#ffcb6b}.nm{color:#f78c6c}.op{color:#89ddff}.num{color:#f78c6c}
+  table{width:100%;border-collapse:collapse;font-size:.83rem}
+  th{background:var(--bg);padding:10px 14px;text-align:left;font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:2px solid var(--border)}
+  td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  td code,p code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:.79rem;font-family:monospace;border:1px solid var(--border)}
+  .route-table td:first-child{font-family:monospace;font-size:.78rem;white-space:nowrap}
+  .method{display:inline-block;padding:2px 8px;border-radius:4px;font-size:.72rem;font-weight:700;min-width:52px;text-align:center}
+  .GET{background:#dcfce7;color:#166534}.POST{background:#dbeafe;color:#1e40af}
+  .PUT{background:#fef9c3;color:#854d0e}.DELETE{background:#fee2e2;color:#991b1b}
+  [data-theme="dark"] .GET{background:#14532d;color:#86efac}
+  [data-theme="dark"] .POST{background:#1e3a5f;color:#93c5fd}
+  [data-theme="dark"] .PUT{background:#422006;color:#fde68a}
+  [data-theme="dark"] .DELETE{background:#450a0a;color:#fca5a5}
+  .auth-any{color:#22c55e;font-weight:600}.auth-admin{color:#f59e0b;font-weight:600}.auth-power{color:#ef4444;font-weight:600}
+  .build-box{background:var(--code-bg);border-radius:10px;padding:16px 20px;font-family:monospace;font-size:.8rem;color:var(--code-text);line-height:1.6}
+  .build-ok{color:#4ade80;font-weight:700}.build-warn{color:#fbbf24}
+  .next-card{background:linear-gradient(135deg,#0ea5e920 0%,#6366f120 100%);border:1px solid var(--accent);border-radius:12px;padding:20px 24px}
+  .next-card h3{font-size:1rem;font-weight:700;margin-bottom:10px;color:var(--accent)}
+  .next-card ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .next-card ul li::before{content:'→ ';color:var(--accent);font-weight:700}
+  .next-card ul li{font-size:.87rem}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+</style>
+</head>
+<body data-theme="light">
+
+<aside id="sidebar">
+  <div class="logo"><h1>🌳 FamilyTree</h1><span>Build Report — Phase C</span></div>
+  <nav>
+    <div class="section-label">Phase C — Endpoints</div>
+    <a href="#summary" class="active">📊 Summary</a>
+    <a href="#timeline">⏱ Timeline</a>
+    <a href="#route-catalogue">🗺 Route Catalogue</a>
+    <a href="#files">📁 Files Created/Modified</a>
+    <a href="#code-auth">💻 AuthHelper</a>
+    <a href="#code-person">💻 PersonEndpoints</a>
+    <a href="#code-tree">💻 TreeEndpoints</a>
+    <a href="#code-surname">💻 SurnameEndpoints</a>
+    <a href="#code-search">💻 SearchEndpoints</a>
+    <a href="#code-admin">💻 AdminEndpoints</a>
+    <a href="#code-program">💻 Program.cs</a>
+    <a href="#decisions">🧠 Decisions</a>
+    <a href="#build">🔨 Build Result</a>
+    <a href="#assumptions">⚠️ Assumptions</a>
+    <a href="#next">▶️ Next Step</a>
+  </nav>
+</aside>
+
+<main id="main">
+  <div class="page-header">
+    <div>
+      <div style="font-size:.75rem;color:var(--text-muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">Phase C — Completed</div>
+      <h2>Backend: Endpoints + Program.cs Wiring</h2>
+      <div class="meta">FamilyTree.Api/Endpoints/ &nbsp;·&nbsp; 2026-05-20 &nbsp;·&nbsp;<span class="badge badge-success">✓ Build Passed</span></div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark mode</button>
+  </div>
+
+  <!-- Summary -->
+  <section id="summary">
+    <div class="summary-grid">
+      <div class="summary-card"><div class="val">6</div><div class="lbl">New files created</div></div>
+      <div class="summary-card"><div class="val">21</div><div class="lbl">API routes registered</div></div>
+      <div class="summary-card"><div class="val">2</div><div class="lbl">Program.cs updates</div></div>
+      <div class="summary-card"><div class="val">0</div><div class="lbl">Build errors</div></div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section id="timeline">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>⏱ Timeline of Actions</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-time">Step 1</div>
+            <div class="tl-title">Read MockAuthMiddleware.cs</div>
+            <div class="tl-desc">Confirmed claim names: <code>ClaimTypes.NameIdentifier</code> (user ID), <code>extension_Role</code> (role string), <code>extension_AssignedTrees</code> (comma-separated tree GUIDs for family_admin). These are the exact claim keys all endpoint auth checks must use.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 2</div>
+            <div class="tl-title">Created AuthHelper.cs</div>
+            <div class="tl-desc">Internal static class in the Endpoints namespace. Provides <code>GetUserId</code>, <code>GetRole</code>, <code>IsPowerAdmin</code>, <code>CanMutate</code>, <code>CanEditTree</code>, and standardised <code>Forbid()</code>/<code>Unauthorized()</code> result helpers. Centralises claim-reading so no endpoint handler contains raw claim string literals.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 3</div>
+            <div class="tl-title">Created PersonEndpoints.cs</div>
+            <div class="tl-desc">7 handlers. <code>search-existing</code> registered first (before <code>/{id}</code>) to prevent route shadowing. PUT injects AppDbContext for the family_admin cross-tree ownership check. Fixed a bug caught mid-write: SearchExisting was calling <code>PersonService.SearchExistingAsync</code> (non-existent) — corrected to inject <code>SearchService</code> directly.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 4</div>
+            <div class="tl-title">Created TreeEndpoints.cs</div>
+            <div class="tl-desc">6 handlers. <code>GetNode</code> clamps levels to ≥ 1. <code>AddRelationship</code> wraps <code>InvalidOperationException</code> (thrown by TreeService when a person is not a tree member) as a 400 Bad Request. <code>AddMember</code> defaults role to "member" if the query param is missing.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 5</div>
+            <div class="tl-title">Created SurnameEndpoints.cs</div>
+            <div class="tl-desc">3 read-only handlers. <code>/relationships</code> registered before <code>/{surname}/recent</code> to prevent "relationships" matching as a surname parameter.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 6</div>
+            <div class="tl-title">Created SearchEndpoints.cs</div>
+            <div class="tl-desc">1 handler. Returns 400 if query param <code>q</code> is missing or blank.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 7</div>
+            <div class="tl-title">Created AdminEndpoints.cs</div>
+            <div class="tl-desc">5 handlers. <code>GetAuditLog</code> accepts <code>page</code> + <code>pageSize</code> query params (pageSize clamped to 1–200) and returns <code>{total, page, pageSize, items}</code> envelope. AppDbContext injected directly for the paginated query rather than adding a method to UserService.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 8</div>
+            <div class="tl-title">Updated Program.cs</div>
+            <div class="tl-desc">Added using statements for Endpoints and Services namespaces. Registered all 7 services as scoped DI. Replaced commented-out endpoint stubs with the 5 live <code>app.MapXxxEndpoints()</code> calls. (RelationshipEndpoints was dropped from the plan — relationships are handled within TreeEndpoints.)</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 9</div>
+            <div class="tl-title">Build verification</div>
+            <div class="tl-desc">dotnet build — 0 errors, 2 pre-existing NU1902 warnings. 7.03s (first full compile after adding endpoint files).</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Route Catalogue -->
+  <section id="route-catalogue">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🗺 Complete Route Catalogue (21 routes)</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <table class="route-table">
+          <thead><tr><th>Method</th><th>Path</th><th>Auth</th><th>Handler / Service Call</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/persons/search-existing</td><td><span class="auth-admin">CanMutate</span></td><td>SearchService.SearchAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/persons/{id}</td><td><span class="auth-any">Any</span></td><td>PersonService.GetByIdAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/persons/{id}/detail</td><td><span class="auth-any">Any</span></td><td>PersonService.GetDetailAsync</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/persons</td><td><span class="auth-admin">CanMutate + CanEditTree(req.TreeId)</span></td><td>PersonService.CreateAsync</td></tr>
+            <tr><td><span class="method PUT">PUT</span></td><td>/api/v1/persons/{id}</td><td><span class="auth-admin">CanMutate + person-tree ownership</span></td><td>PersonService.UpdateAsync</td></tr>
+            <tr><td><span class="method DELETE">DELETE</span></td><td>/api/v1/persons/{id}</td><td><span class="auth-power">PowerAdmin only</span></td><td>PersonService.DeleteAsync</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/persons/{id}/photo-upload-url</td><td><span class="auth-admin">CanMutate</span></td><td>PersonService.GetPhotoUploadUrlAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/trees</td><td><span class="auth-any">Any</span></td><td>TreeService.ListAllAsync</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/trees</td><td><span class="auth-power">PowerAdmin only</span></td><td>TreeService.CreateAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/trees/{treeId}/node/{personId}</td><td><span class="auth-any">Any</span></td><td>TreeService.GetNodeAsync (levels query param)</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/trees/{treeId}/relationships</td><td><span class="auth-admin">CanEditTree(treeId)</span></td><td>TreeService.AddRelationshipAsync</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/trees/{treeId}/members/{personId}</td><td><span class="auth-admin">CanEditTree(treeId)</span></td><td>TreeService.AddMemberAsync</td></tr>
+            <tr><td><span class="method DELETE">DELETE</span></td><td>/api/v1/trees/{treeId}/members/{personId}</td><td><span class="auth-power">PowerAdmin only</span></td><td>TreeService.RemoveMemberAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/surnames</td><td><span class="auth-any">Any</span></td><td>SurnameRelationshipService.ListAllSurnamesAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/surnames/relationships</td><td><span class="auth-any">Any</span></td><td>SurnameRelationshipService.ListCrossLinksAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/surnames/{surname}/recent</td><td><span class="auth-any">Any</span></td><td>SurnameRelationshipService.GetRecentLivingMemberAsync</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/search</td><td><span class="auth-any">Any</span></td><td>SearchService.SearchAsync (q required)</td></tr>
+            <tr><td><span class="method GET">GET</span></td><td>/api/v1/admin/users</td><td><span class="auth-power">PowerAdmin only</span></td><td>UserService.ListUsersAsync</td></tr>
+            <tr><td><span class="method PUT">PUT</span></td><td>/api/v1/admin/users/{id}/role</td><td><span class="auth-power">PowerAdmin only</span></td><td>UserService.UpdateRoleAsync</td></tr>
+            <tr><td><span class="method DELETE">DELETE</span></td><td>/api/v1/admin/users/{id}</td><td><span class="auth-power">PowerAdmin only</span></td><td>UserService.DeleteUserAsync</td></tr>
+            <tr><td><span class="method POST">POST</span></td><td>/api/v1/admin/trees/{treeId}/admins/{userId}</td><td><span class="auth-power">PowerAdmin only</span></td><td>UserService.AssignAdminAsync</td></tr>
+            <tr style="background:var(--bg)"><td colspan="4" style="padding:8px 14px;font-size:.78rem;color:var(--text-muted);">+ GET /api/v1/admin/audit-log (paginated) · GET /health</td></tr>
+          </tbody>
+        </table>
+        <div style="margin-top:14px;font-size:.78rem;color:var(--text-muted);">
+          <span class="auth-any">Any</span> = no auth check &nbsp;|&nbsp;
+          <span class="auth-admin">CanMutate</span> = family_admin or power_admin &nbsp;|&nbsp;
+          <span class="auth-admin">CanEditTree</span> = power_admin or family_admin assigned to that treeId &nbsp;|&nbsp;
+          <span class="auth-power">PowerAdmin only</span> = power_admin role only
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Files -->
+  <section id="files">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>📁 Files Created / Modified</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="file-list">
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/AuthHelper.cs</span><div><span class="badge badge-purple">Shared</span><span class="file-desc" style="display:block;margin-top:4px;">Internal static helper — GetUserId, GetRole, IsPowerAdmin, CanMutate, CanEditTree, Forbid(), Unauthorized(). Single source of truth for claim name strings.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/PersonEndpoints.cs</span><div><span class="badge badge-info">Person</span><span class="file-desc" style="display:block;margin-top:4px;">7 routes. search-existing registered before {id}. PUT does family_admin cross-tree ownership check via DB query. Injects SearchService for search-existing handler.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/TreeEndpoints.cs</span><div><span class="badge badge-warn">Tree</span><span class="file-desc" style="display:block;margin-top:4px;">6 routes. GetNode clamps levels≥1. AddRelationship maps InvalidOperationException to 400. AddMember defaults role to "member".</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/SurnameEndpoints.cs</span><div><span class="badge badge-success">Surname</span><span class="file-desc" style="display:block;margin-top:4px;">3 read-only routes. /relationships registered before /{surname} to prevent segment collision.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/SearchEndpoints.cs</span><div><span class="badge badge-info">Search</span><span class="file-desc" style="display:block;margin-top:4px;">1 route. Returns 400 if q is missing/blank. No auth check — open to all roles per FR-11.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">Endpoints/AdminEndpoints.cs</span><div><span class="badge badge-red">Admin</span><span class="file-desc" style="display:block;margin-top:4px;">5 routes (+audit-log). Audit log paginated with page/pageSize params, clamped to 1–200. AppDbContext injected directly for the paginated query.</span></div></div>
+          <div class="file-item"><span class="file-icon">✏️</span><span class="file-name">Program.cs</span><div><span class="badge badge-purple">Modified</span><span class="file-desc" style="display:block;margin-top:4px;">Added Endpoints + Services usings. Registered 7 scoped services. Replaced commented stubs with 5 live MapXxxEndpoints() calls.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: AuthHelper -->
+  <section id="code-auth">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 AuthHelper.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">internal static class</span> <span class="ty">AuthHelper</span>
+{
+    <span class="kw">internal static</span> <span class="ty">Guid</span>? <span class="nm">GetUserId</span>(<span class="ty">HttpContext</span> ctx) <span class="op">=&gt;</span>
+        <span class="ty">Guid</span>.<span class="nm">TryParse</span>(ctx.<span class="nm">User</span>.<span class="nm">FindFirstValue</span>(<span class="ty">ClaimTypes</span>.<span class="nm">NameIdentifier</span>), <span class="kw">out var</span> id) ? id : <span class="kw">null</span>;
+
+    <span class="kw">internal static</span> <span class="ty">string</span> <span class="nm">GetRole</span>(<span class="ty">HttpContext</span> ctx) <span class="op">=&gt;</span>
+        ctx.<span class="nm">User</span>.<span class="nm">FindFirstValue</span>(<span class="st">"extension_Role"</span>) ?? <span class="ty">string</span>.<span class="nm">Empty</span>;
+
+    <span class="kw">internal static</span> <span class="ty">bool</span> <span class="nm">IsPowerAdmin</span>(<span class="ty">HttpContext</span> ctx) <span class="op">=&gt;</span>
+        <span class="nm">GetRole</span>(ctx) <span class="op">==</span> <span class="st">"power_admin"</span>;
+
+    <span class="kw">internal static</span> <span class="ty">bool</span> <span class="nm">CanMutate</span>(<span class="ty">HttpContext</span> ctx) <span class="op">=&gt;</span>
+        <span class="nm">GetRole</span>(ctx) <span class="kw">is</span> <span class="st">"power_admin"</span> <span class="kw">or</span> <span class="st">"family_admin"</span>;
+
+    <span class="kw">internal static</span> <span class="ty">bool</span> <span class="nm">CanEditTree</span>(<span class="ty">HttpContext</span> ctx, <span class="ty">Guid</span> treeId)
+    {
+        <span class="kw">var</span> role <span class="op">=</span> <span class="nm">GetRole</span>(ctx);
+        <span class="kw">if</span> (role <span class="op">==</span> <span class="st">"power_admin"</span>) <span class="kw">return true</span>;
+        <span class="kw">if</span> (role <span class="op">!=</span> <span class="st">"family_admin"</span>) <span class="kw">return false</span>;
+        <span class="kw">var</span> assigned <span class="op">=</span> ctx.<span class="nm">User</span>.<span class="nm">FindFirstValue</span>(<span class="st">"extension_AssignedTrees"</span>) ?? <span class="ty">string</span>.<span class="nm">Empty</span>;
+        <span class="kw">return</span> assigned.<span class="nm">Split</span>(<span class="st">','</span>, <span class="ty">StringSplitOptions</span>.<span class="nm">RemoveEmptyEntries</span>)
+                       .<span class="nm">Contains</span>(treeId.<span class="nm">ToString</span>());
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: PersonEndpoints -->
+  <section id="code-person">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 PersonEndpoints.cs — Update (cross-tree ownership check)</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">private static async</span> <span class="ty">Task</span>&lt;<span class="ty">IResult</span>&gt; <span class="nm">Update</span>(
+    <span class="ty">Guid</span> id, <span class="ty">UpdatePersonRequest</span> req,
+    <span class="ty">HttpContext</span> ctx, <span class="ty">PersonService</span> svc, <span class="ty">AppDbContext</span> db)
+{
+    <span class="kw">if</span> (!<span class="ty">AuthHelper</span>.<span class="nm">CanMutate</span>(ctx)) <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Forbid</span>();
+    <span class="kw">var</span> actorId <span class="op">=</span> <span class="ty">AuthHelper</span>.<span class="nm">GetUserId</span>(ctx);
+    <span class="kw">if</span> (actorId <span class="kw">is null</span>) <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Unauthorized</span>();
+
+    <span class="cm">// family_admin: verify actor manages ≥1 tree this person belongs to</span>
+    <span class="kw">if</span> (!<span class="ty">AuthHelper</span>.<span class="nm">IsPowerAdmin</span>(ctx))
+    {
+        <span class="kw">var</span> assigned <span class="op">=</span> (ctx.<span class="nm">User</span>.<span class="nm">FindFirst</span>(<span class="st">"extension_AssignedTrees"</span>)?.<span class="nm">Value</span> ?? <span class="ty">string</span>.<span class="nm">Empty</span>)
+            .<span class="nm">Split</span>(<span class="st">','</span>, <span class="ty">StringSplitOptions</span>.<span class="nm">RemoveEmptyEntries</span>);
+        <span class="kw">var</span> personTrees <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">PersonTreeMemberships</span>
+            .<span class="nm">Where</span>(m <span class="op">=&gt;</span> m.<span class="nm">PersonId</span> <span class="op">==</span> id)
+            .<span class="nm">Select</span>(m <span class="op">=&gt;</span> m.<span class="nm">FamilyTreeId</span>.<span class="nm">ToString</span>())
+            .<span class="nm">ToListAsync</span>();
+        <span class="kw">if</span> (!personTrees.<span class="nm">Any</span>(t <span class="op">=&gt;</span> assigned.<span class="nm">Contains</span>(t)))
+            <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Forbid</span>();
+    }
+    <span class="kw">var</span> result <span class="op">=</span> <span class="kw">await</span> svc.<span class="nm">UpdateAsync</span>(id, req, actorId.<span class="nm">Value</span>);
+    <span class="kw">return</span> result <span class="kw">is null</span> ? <span class="ty">Results</span>.<span class="nm">NotFound</span>() : <span class="ty">Results</span>.<span class="nm">Ok</span>(result);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: TreeEndpoints -->
+  <section id="code-tree">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 TreeEndpoints.cs — AddRelationship (error mapping)</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">private static async</span> <span class="ty">Task</span>&lt;<span class="ty">IResult</span>&gt; <span class="nm">AddRelationship</span>(
+    <span class="ty">Guid</span> treeId, <span class="ty">CreateRelationshipRequest</span> req,
+    <span class="ty">HttpContext</span> ctx, <span class="ty">TreeService</span> svc)
+{
+    <span class="kw">if</span> (!<span class="ty">AuthHelper</span>.<span class="nm">CanEditTree</span>(ctx, treeId)) <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Forbid</span>();
+    <span class="kw">var</span> actorId <span class="op">=</span> <span class="ty">AuthHelper</span>.<span class="nm">GetUserId</span>(ctx);
+    <span class="kw">if</span> (actorId <span class="kw">is null</span>) <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Unauthorized</span>();
+    <span class="kw">try</span>
+    {
+        <span class="kw">await</span> svc.<span class="nm">AddRelationshipAsync</span>(treeId, req, actorId.<span class="nm">Value</span>);
+        <span class="kw">return</span> <span class="ty">Results</span>.<span class="nm">Created</span>(<span class="st">$"/api/v1/trees/{treeId}/relationships"</span>, <span class="kw">null</span>);
+    }
+    <span class="kw">catch</span> (<span class="ty">InvalidOperationException</span> ex)
+    {
+        <span class="kw">return</span> <span class="ty">Results</span>.<span class="nm">BadRequest</span>(<span class="kw">new</span> { error <span class="op">=</span> ex.<span class="nm">Message</span> });
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: SurnameEndpoints -->
+  <section id="code-surname">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 SurnameEndpoints.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public static void</span> <span class="nm">MapSurnameEndpoints</span>(<span class="kw">this</span> <span class="ty">WebApplication</span> app)
+{
+    <span class="kw">var</span> group <span class="op">=</span> app.<span class="nm">MapGroup</span>(<span class="st">"/api/v1/surnames"</span>).<span class="nm">WithTags</span>(<span class="st">"Surnames"</span>);
+    <span class="cm">// /relationships must be registered before /{surname}/recent to avoid matching "relationships" as a surname param</span>
+    group.<span class="nm">MapGet</span>(<span class="st">"/relationships"</span>,    <span class="nm">ListCrossLinks</span>);
+    group.<span class="nm">MapGet</span>(<span class="st">"/{surname}/recent"</span>, <span class="nm">GetRecentMember</span>);
+    group.<span class="nm">MapGet</span>(<span class="st">"/"</span>,               <span class="nm">ListSurnames</span>);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: SearchEndpoints -->
+  <section id="code-search">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 SearchEndpoints.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">private static async</span> <span class="ty">Task</span>&lt;<span class="ty">IResult</span>&gt; <span class="nm">Search</span>(
+    <span class="ty">string</span>? q, <span class="ty">string</span>? surname, <span class="ty">SearchService</span> svc)
+{
+    <span class="kw">if</span> (<span class="ty">string</span>.<span class="nm">IsNullOrWhiteSpace</span>(q))
+        <span class="kw">return</span> <span class="ty">Results</span>.<span class="nm">BadRequest</span>(<span class="kw">new</span> { error <span class="op">=</span> <span class="st">"Query parameter 'q' is required."</span> });
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="nm">Ok</span>(<span class="kw">await</span> svc.<span class="nm">SearchAsync</span>(q, surname));
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: AdminEndpoints -->
+  <section id="code-admin">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 AdminEndpoints.cs — Audit Log (paginated)</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">private static async</span> <span class="ty">Task</span>&lt;<span class="ty">IResult</span>&gt; <span class="nm">GetAuditLog</span>(
+    <span class="ty">HttpContext</span> ctx, <span class="ty">AppDbContext</span> db,
+    <span class="ty">int</span> page <span class="op">=</span> <span class="num">1</span>, <span class="ty">int</span> pageSize <span class="op">=</span> <span class="num">50</span>)
+{
+    <span class="kw">if</span> (!<span class="ty">AuthHelper</span>.<span class="nm">IsPowerAdmin</span>(ctx)) <span class="kw">return</span> <span class="ty">AuthHelper</span>.<span class="nm">Forbid</span>();
+
+    pageSize <span class="op">=</span> <span class="ty">Math</span>.<span class="nm">Clamp</span>(pageSize, <span class="num">1</span>, <span class="num">200</span>);
+    page     <span class="op">=</span> <span class="ty">Math</span>.<span class="nm">Max</span>(page, <span class="num">1</span>);
+
+    <span class="kw">var</span> total <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">AuditLog</span>.<span class="nm">CountAsync</span>();
+    <span class="kw">var</span> items <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">AuditLog</span>
+        .<span class="nm">OrderByDescending</span>(a <span class="op">=&gt;</span> a.<span class="nm">ChangedAt</span>)
+        .<span class="nm">Skip</span>((page <span class="op">-</span> <span class="num">1</span>) <span class="op">*</span> pageSize)
+        .<span class="nm">Take</span>(pageSize)
+        .<span class="nm">Select</span>(a <span class="op">=&gt;</span> <span class="kw">new</span> <span class="ty">AuditLogResponse</span>(...))
+        .<span class="nm">ToListAsync</span>();
+
+    <span class="kw">return</span> <span class="ty">Results</span>.<span class="nm">Ok</span>(<span class="kw">new</span> { total, page, pageSize, items });
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code: Program.cs -->
+  <section id="code-program">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 Program.cs — Final State</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">using</span> <span class="ns">FamilyTree.Api.Data</span>;
+<span class="kw">using</span> <span class="ns">FamilyTree.Api.DevTools</span>;
+<span class="at">using FamilyTree.Api.Endpoints;</span>   <span class="cm">// ← added</span>
+<span class="kw">using</span> <span class="ns">FamilyTree.Api.Middleware</span>;
+<span class="at">using FamilyTree.Api.Services;</span>    <span class="cm">// ← added</span>
+...
+
+<span class="cm">// ── Services (new registrations) ─────────────────────────</span>
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">AuditService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">SearchService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">SurnameRelationshipService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">UserService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">GraphTraversalService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">PersonService</span>&gt;();
+builder.<span class="nm">Services</span>.<span class="nm">AddScoped</span>&lt;<span class="ty">TreeService</span>&gt;();
+
+<span class="cm">// ── Endpoints (was commented out — now live) ──────────────</span>
+app.<span class="nm">MapPersonEndpoints</span>();
+app.<span class="nm">MapTreeEndpoints</span>();
+app.<span class="nm">MapSurnameEndpoints</span>();
+app.<span class="nm">MapSearchEndpoints</span>();
+app.<span class="nm">MapAdminEndpoints</span>();</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Decisions -->
+  <section id="decisions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🧠 Design Decisions</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Decision</th><th>Reasoning</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>AuthHelper</code> as an internal static class in the Endpoints namespace</td>
+              <td>Auth logic is endpoint-specific (claim reading, HTTP result helpers). Making it internal prevents it being misused in services. Static avoids DI registration for a utility that has no state.</td>
+            </tr>
+            <tr>
+              <td>Manual claim-based auth instead of <code>[Authorize]</code> attributes</td>
+              <td><code>MockAuthMiddleware</code> injects a <code>ClaimsPrincipal</code> without going through ASP.NET Core's authorization middleware. Using <code>[Authorize]</code> would require the real middleware to be wired even in dev. Manual checks are also more explicit and testable — you can read exactly what is being checked in the handler code.</td>
+            </tr>
+            <tr>
+              <td>Route registration order: <code>search-existing</code> before <code>/{id}</code> in PersonEndpoints</td>
+              <td>Minimal API routing is first-match-wins for ambiguous segments. A request to <code>/persons/search-existing</code> could match <code>/{id}</code> and attempt to parse "search-existing" as a Guid (which fails as a 400, not a 404). Registering the static path first avoids this entirely. Same reasoning applied to <code>/surnames/relationships</code> before <code>/{surname}/recent</code>.</td>
+            </tr>
+            <tr>
+              <td><code>PUT /persons/{id}</code> does a DB query for family_admin tree ownership check</td>
+              <td>Unlike <code>POST /persons</code> (where treeId is in the request body) or tree endpoints (where treeId is in the URL), a person edit has no treeId in the URL. The only correct check is: does this person belong to any tree the admin manages? One lightweight <code>SELECT FamilyTreeId FROM PersonTreeMemberships WHERE PersonId = ?</code> suffices.</td>
+            </tr>
+            <tr>
+              <td>Dropped <code>MapRelationshipEndpoints()</code> from Program.cs</td>
+              <td>The original plan stub referenced <code>RelationshipEndpoints</code>, but relationship operations are logically tree-scoped (you add a relationship within a tree context) and were implemented as <code>POST /trees/{treeId}/relationships</code> in TreeEndpoints. No separate file needed.</td>
+            </tr>
+            <tr>
+              <td>Audit log returns <code>{total, page, pageSize, items}</code> envelope</td>
+              <td>A paginated endpoint without a total count forces clients to guess when pagination ends. Including total allows the frontend to render a "page X of Y" indicator or stop requesting pages when none remain.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Build -->
+  <section id="build">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🔨 Build Result</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="build-box">
+<span style="color:#94a3b8;">$ dotnet build FamilyTree.Api.csproj</span>
+
+  All projects are up-to-date for restore.
+<span class="build-warn">  warning NU1902: Package 'Microsoft.Identity.Web' has known vulnerability (pre-existing)</span>
+  FamilyTree.Api → bin\Debug\net8.0\FamilyTree.Api.dll
+
+<span class="build-ok">Build succeeded.</span>
+
+  2 Warning(s)  ← pre-existing NU1902, unrelated to this change
+  <span class="build-ok">0 Error(s)</span>
+
+Time Elapsed 00:00:07.03
+        </div>
+        <p style="margin-top:12px;font-size:.8rem;color:var(--text-muted);">
+          <strong>Bug caught and fixed:</strong> <code>PersonEndpoints.SearchExisting</code> initially called <code>PersonService.SearchExistingAsync</code> (non-existent). Detected immediately — corrected to inject <code>SearchService</code> and call <code>SearchAsync</code> before the build was run.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Assumptions -->
+  <section id="assumptions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>⚠️ Assumptions Made</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Assumption</th><th>Risk / Mitigation</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code>extension_AssignedTrees</code> is a single GUID string (not comma-separated) in mock auth</td>
+              <td>MockAuthMiddleware adds only one tree ID. The code splits on <code>','</code> so it handles single or multiple values. If Azure AD B2C returns multiple trees as comma-separated, it still works. Low risk.</td>
+            </tr>
+            <tr>
+              <td>Minimal API parameter binding for query strings works without <code>[FromQuery]</code></td>
+              <td>In .NET 8 minimal APIs, simple types in method signatures are automatically bound from query strings. Confirmed by .NET docs. If it fails in testing, adding <code>[FromQuery]</code> is a one-line fix.</td>
+            </tr>
+            <tr>
+              <td><code>role</code> in <code>AddMember</code> is a query parameter (not in the body)</td>
+              <td>The route is <code>POST /trees/{treeId}/members/{personId}</code> with no request body. Role is a query param defaulting to "member". This is convenient but means the role can't be sent in a JSON body. If this becomes awkward for the frontend, a small request body DTO can be added later.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Next -->
+  <section id="next">
+    <div class="next-card">
+      <h3>▶️ Awaiting Approval — Phase D: Backend Tests</h3>
+      <ul>
+        <li><strong>PersonEndpointTests.cs</strong> — GET/POST/PUT/DELETE with role assertions</li>
+        <li><strong>TreeEndpointTests.cs</strong> — node fetch, add relationship, cross-tree membership</li>
+        <li><strong>AuthorizationTests.cs</strong> — community_member blocked, family_admin tree-scoped, power_admin unrestricted</li>
+        <li><strong>SearchEndpointTests.cs</strong> — name match, surname filter, missing q → 400</li>
+        <li><strong>AuditLogTests.cs</strong> — verify audit row created on every mutation</li>
+        <li>Pattern: <code>WebApplicationFactory&lt;Program&gt;</code> + <code>X-Mock-User-Role</code> header injection</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  function toggleTheme(){const b=document.body,btn=document.getElementById('theme-toggle');if(b.dataset.theme==='dark'){b.dataset.theme='light';btn.textContent='🌙 Dark mode';}else{b.dataset.theme='dark';btn.textContent='☀️ Light mode';}}
+  function toggleCard(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('hidden');}
+  const sections=document.querySelectorAll('section[id]');
+  const links=document.querySelectorAll('#sidebar nav a');
+  window.addEventListener('scroll',()=>{let c='';sections.forEach(s=>{if(window.scrollY>=s.offsetTop-80)c=s.id;});links.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c)l.classList.add('active');});},{passive:true});
+</script>
+</body>
+</html>

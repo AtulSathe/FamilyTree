@@ -1,0 +1,28 @@
+# .NET
+bin/
+obj/
+*.user
+*.suo
+.vs/
+backend/**/*.Development.json
+!backend/**/*.Development.json.example
+
+# Node / frontend
+node_modules/
+dist/
+frontend/.env.local
+frontend/.env.*.local
+*.tsbuildinfo
+
+# Secrets
+appsettings.Development.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code session memory
+.claude/
+
+# Build artifacts / scratch
+files.zip

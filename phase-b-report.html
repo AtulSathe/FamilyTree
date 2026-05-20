@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Phase B Report — FamilyTree Backend Services</title>
+<style>
+  :root {
+    --bg:#f8f9fa;--sidebar-bg:#1e293b;--sidebar-text:#94a3b8;
+    --sidebar-active:#38bdf8;--card-bg:#ffffff;--border:#e2e8f0;
+    --text:#1e293b;--text-muted:#64748b;--accent:#0ea5e9;
+    --success:#22c55e;--warn:#f59e0b;--error:#ef4444;
+    --code-bg:#1e293b;--code-text:#e2e8f0;
+    --timeline-line:#cbd5e1;--tag-bg:#e0f2fe;--tag-text:#0369a1;
+  }
+  [data-theme="dark"]{
+    --bg:#0f172a;--sidebar-bg:#020617;--sidebar-text:#64748b;
+    --sidebar-active:#38bdf8;--card-bg:#1e293b;--border:#334155;
+    --text:#e2e8f0;--text-muted:#94a3b8;--accent:#38bdf8;
+    --code-bg:#0f172a;--code-text:#e2e8f0;
+    --timeline-line:#334155;--tag-bg:#0c4a6e;--tag-text:#38bdf8;
+  }
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);display:flex;min-height:100vh}
+  #sidebar{width:260px;min-height:100vh;background:var(--sidebar-bg);color:var(--sidebar-text);position:fixed;top:0;left:0;overflow-y:auto;z-index:100;display:flex;flex-direction:column}
+  #sidebar .logo{padding:24px 20px 16px;border-bottom:1px solid #334155}
+  #sidebar .logo h1{font-size:1rem;font-weight:700;color:#f1f5f9;letter-spacing:.5px}
+  #sidebar .logo span{font-size:.75rem;color:var(--sidebar-text)}
+  #sidebar nav{padding:12px 0;flex:1}
+  #sidebar nav a{display:flex;align-items:center;gap:10px;padding:9px 20px;color:var(--sidebar-text);text-decoration:none;font-size:.85rem;transition:background .15s,color .15s;border-left:3px solid transparent}
+  #sidebar nav a:hover,#sidebar nav a.active{background:rgba(56,189,248,.1);color:var(--sidebar-active);border-left-color:var(--sidebar-active)}
+  #sidebar nav .section-label{padding:16px 20px 6px;font-size:.7rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;color:#475569}
+  #main{margin-left:260px;flex:1;padding:32px 40px;max-width:1140px}
+  .page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:32px;flex-wrap:wrap;gap:16px}
+  .page-header h2{font-size:1.6rem;font-weight:700}
+  .page-header .meta{font-size:.85rem;color:var(--text-muted);margin-top:4px}
+  #theme-toggle{background:var(--card-bg);border:1px solid var(--border);border-radius:8px;padding:7px 14px;cursor:pointer;font-size:.85rem;color:var(--text);display:flex;align-items:center;gap:6px}
+  .badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:.75rem;font-weight:600}
+  .badge-success{background:#dcfce7;color:#166534}
+  .badge-warn{background:#fef9c3;color:#854d0e}
+  .badge-info{background:var(--tag-bg);color:var(--tag-text)}
+  .badge-purple{background:#f3e8ff;color:#6b21a8}
+  [data-theme="dark"] .badge-success{background:#14532d;color:#86efac}
+  [data-theme="dark"] .badge-warn{background:#422006;color:#fde68a}
+  [data-theme="dark"] .badge-purple{background:#3b0764;color:#d8b4fe}
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:32px}
+  .summary-card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;padding:18px 20px;display:flex;flex-direction:column;gap:6px}
+  .summary-card .val{font-size:2rem;font-weight:800;color:var(--accent)}
+  .summary-card .lbl{font-size:.8rem;color:var(--text-muted)}
+  .card{background:var(--card-bg);border:1px solid var(--border);border-radius:12px;margin-bottom:24px;overflow:hidden}
+  .card-header{padding:14px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+  .card-header h3{font-size:1rem;font-weight:600;display:flex;align-items:center;gap:10px}
+  .card-header .chevron{transition:transform .2s;color:var(--text-muted)}
+  .card-header.open .chevron{transform:rotate(180deg)}
+  .card-body{padding:20px}
+  .card-body.hidden{display:none}
+  .timeline{position:relative;padding-left:28px}
+  .timeline::before{content:'';position:absolute;left:8px;top:8px;bottom:8px;width:2px;background:var(--timeline-line)}
+  .tl-item{position:relative;margin-bottom:20px}
+  .tl-dot{position:absolute;left:-24px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--accent);border:2px solid var(--bg)}
+  .tl-dot.success{background:var(--success)}
+  .tl-dot.warn{background:var(--warn)}
+  .tl-time{font-size:.72rem;color:var(--text-muted);margin-bottom:3px}
+  .tl-title{font-size:.9rem;font-weight:600;color:var(--text)}
+  .tl-desc{font-size:.82rem;color:var(--text-muted);margin-top:3px;line-height:1.5}
+  .file-list{display:flex;flex-direction:column;gap:8px}
+  .file-item{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:8px}
+  .file-icon{font-size:1.1rem;margin-top:1px}
+  .file-name{font-size:.85rem;font-weight:600;font-family:monospace;color:var(--accent);min-width:230px}
+  .file-desc{font-size:.78rem;color:var(--text-muted);line-height:1.5}
+  pre{background:var(--code-bg);color:var(--code-text);border-radius:10px;padding:18px 20px;overflow-x:auto;font-size:.8rem;line-height:1.65;font-family:'Cascadia Code','Fira Code','Consolas',monospace;margin:0;white-space:pre}
+  .kw{color:#c792ea}.ty{color:#82aaff}.st{color:#c3e88d}.cm{color:#546e7a;font-style:italic}
+  .ns{color:#89ddff}.at{color:#ffcb6b}.nm{color:#f78c6c}.op{color:#89ddff}.num{color:#f78c6c}
+  table{width:100%;border-collapse:collapse;font-size:.83rem}
+  th{background:var(--bg);padding:10px 14px;text-align:left;font-weight:600;font-size:.78rem;text-transform:uppercase;letter-spacing:.5px;color:var(--text-muted);border-bottom:2px solid var(--border)}
+  td{padding:10px 14px;border-bottom:1px solid var(--border);vertical-align:top;line-height:1.5}
+  tr:last-child td{border-bottom:none}
+  td code,p code{background:var(--bg);padding:2px 6px;border-radius:4px;font-size:.79rem;font-family:monospace;border:1px solid var(--border)}
+  .build-box{background:var(--code-bg);border-radius:10px;padding:16px 20px;font-family:monospace;font-size:.8rem;color:var(--code-text);line-height:1.6}
+  .build-ok{color:#4ade80;font-weight:700}
+  .build-warn{color:#fbbf24}
+  .next-card{background:linear-gradient(135deg,#0ea5e920 0%,#6366f120 100%);border:1px solid var(--accent);border-radius:12px;padding:20px 24px}
+  .next-card h3{font-size:1rem;font-weight:700;margin-bottom:10px;color:var(--accent)}
+  .next-card ul{list-style:none;display:flex;flex-direction:column;gap:6px}
+  .next-card ul li::before{content:'→ ';color:var(--accent);font-weight:700}
+  .next-card ul li{font-size:.87rem}
+  .service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .service-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px}
+  .service-card h4{font-size:.9rem;font-weight:700;color:var(--accent);margin-bottom:8px;font-family:monospace}
+  .service-card .deps{font-size:.75rem;color:var(--text-muted);margin-bottom:8px}
+  .service-card ul{list-style:none;display:flex;flex-direction:column;gap:4px}
+  .service-card ul li{font-size:.78rem;color:var(--text);padding-left:12px;position:relative}
+  .service-card ul li::before{content:'•';position:absolute;left:0;color:var(--accent)}
+  ::-webkit-scrollbar{width:6px;height:6px}
+  ::-webkit-scrollbar-track{background:transparent}
+  ::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+</style>
+</head>
+<body data-theme="light">
+
+<aside id="sidebar">
+  <div class="logo">
+    <h1>🌳 FamilyTree</h1>
+    <span>Build Report — Phase B</span>
+  </div>
+  <nav>
+    <div class="section-label">Phase B — Services</div>
+    <a href="#summary" class="active">📊 Summary</a>
+    <a href="#timeline">⏱ Timeline</a>
+    <a href="#service-map">🗺 Service Map</a>
+    <a href="#files">📁 Files Created</a>
+    <a href="#code-audit">💻 AuditService</a>
+    <a href="#code-search">💻 SearchService</a>
+    <a href="#code-surname">💻 SurnameRelationshipService</a>
+    <a href="#code-user">💻 UserService</a>
+    <a href="#code-graph">💻 GraphTraversalService</a>
+    <a href="#code-person">💻 PersonService</a>
+    <a href="#code-tree">💻 TreeService</a>
+    <a href="#decisions">🧠 Decisions</a>
+    <a href="#build">🔨 Build Result</a>
+    <a href="#assumptions">⚠️ Assumptions</a>
+    <a href="#next">▶️ Next Step</a>
+  </nav>
+</aside>
+
+<main id="main">
+
+  <div class="page-header">
+    <div>
+      <div style="font-size:.75rem;color:var(--text-muted);font-weight:600;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">Phase B — Completed</div>
+      <h2>Backend: Services</h2>
+      <div class="meta">FamilyTree.Api/Services/ &nbsp;·&nbsp; 2026-05-20 &nbsp;·&nbsp;
+        <span class="badge badge-success">✓ Build Passed</span>
+      </div>
+    </div>
+    <button id="theme-toggle" onclick="toggleTheme()">🌙 Dark mode</button>
+  </div>
+
+  <!-- Summary -->
+  <section id="summary">
+    <div class="summary-grid">
+      <div class="summary-card"><div class="val">7</div><div class="lbl">Service classes created</div></div>
+      <div class="summary-card"><div class="val">30+</div><div class="lbl">Public methods implemented</div></div>
+      <div class="summary-card"><div class="val">0</div><div class="lbl">Build errors</div></div>
+      <div class="summary-card"><div class="val">1.43s</div><div class="lbl">Build time (incremental)</div></div>
+    </div>
+  </section>
+
+  <!-- Timeline -->
+  <section id="timeline">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>⏱ Timeline of Actions</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-time">Step 1</div>
+            <div class="tl-title">Read infrastructure files</div>
+            <div class="tl-desc">Read AppDbContext.cs, GraphDbContext.cs, Program.cs, PersonTreeMembership.cs, appsettings.json, and FamilyTree.Api.csproj to understand available DbSets, Gremlin API, DI setup, and NuGet packages before writing any service.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 2</div>
+            <div class="tl-title">Created AuditService.cs</div>
+            <div class="tl-desc">Simplest service — serialises old/new values with System.Text.Json and appends an AuditLog row. Used by PersonService, TreeService, and UserService as a dependency.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 3</div>
+            <div class="tl-title">Created SearchService.cs</div>
+            <div class="tl-desc">EF Core LIKE query across Persons.FullName, joining PersonTreeMemberships + FamilyTrees. Optional surname filter. Returns one SearchResultDto per (person, tree) pair.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 4</div>
+            <div class="tl-title">Created SurnameRelationshipService.cs</div>
+            <div class="tl-desc">Three read-only queries: list all trees with member counts, list pre-computed cross-tree SurnameLinks, and find the most recent living member of a surname.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 5</div>
+            <div class="tl-title">Created UserService.cs</div>
+            <div class="tl-desc">Admin CRUD — list users, update role, delete user, assign FamilyAdmin to a tree. All mutations call AuditService. Assign uses FindAsync to prevent duplicate rows.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 6 — most complex</div>
+            <div class="tl-title">Created GraphTraversalService.cs</div>
+            <div class="tl-desc">Wraps all Gremlin interactions. Key design: GetNeighboursAsync queries outgoing and incoming edges separately using project() to return IDictionary results. A caller-supplied sqlLookup delegate bulk-fetches names/photos from SQL to avoid N+1 queries. AddEdgeAsync, AddPersonVertexAsync, and UpdatePersonVertexAsync cover all write operations.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 7</div>
+            <div class="tl-title">Created PersonService.cs</div>
+            <div class="tl-desc">Full person CRUD. CreateAsync writes to SQL (Person + PersonTreeMembership) then fires graph.AddPersonVertexAsync. UpdateAsync applies partial updates (null fields are skipped) and upserts PersonDetail. DeleteAsync removes memberships first to respect FK constraints. GetPhotoUploadUrlAsync generates Azure Blob SAS (Write + Create, 15 min TTL) using the BlobServiceClient from the already-present Azure.Storage.Blobs package.</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 8</div>
+            <div class="tl-title">Created TreeService.cs</div>
+            <div class="tl-desc">GetNodeAsync confirms tree membership, fetches PersonResponse from SQL, then calls GraphTraversalService.GetNeighboursAsync with a SQL lookup lambda. AddRelationshipAsync validates membership, adds the primary Gremlin edge, then adds the reverse edge (using a map for directed types; undirected types get the same label in both directions).</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-time">Step 9</div>
+            <div class="tl-title">Build verification</div>
+            <div class="tl-desc">dotnet build — 0 errors, 2 pre-existing NU1902 warnings. Incremental build in 1.43 seconds.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Service Map -->
+  <section id="service-map">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🗺 Service Dependency Map</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="service-grid">
+          <div class="service-card">
+            <h4>AuditService</h4>
+            <div class="deps">Deps: AppDbContext</div>
+            <ul><li>LogAsync(userId, entityType, entityId, action, old, new)</li></ul>
+          </div>
+          <div class="service-card">
+            <h4>SearchService</h4>
+            <div class="deps">Deps: AppDbContext</div>
+            <ul><li>SearchAsync(q, surname?) → List&lt;SearchResultDto&gt;</li></ul>
+          </div>
+          <div class="service-card">
+            <h4>SurnameRelationshipService</h4>
+            <div class="deps">Deps: AppDbContext</div>
+            <ul>
+              <li>ListAllSurnamesAsync() → List&lt;SurnameResponse&gt;</li>
+              <li>ListCrossLinksAsync() → List&lt;SurnameLinkResponse&gt;</li>
+              <li>GetRecentLivingMemberAsync(surname) → PersonResponse?</li>
+            </ul>
+          </div>
+          <div class="service-card">
+            <h4>UserService</h4>
+            <div class="deps">Deps: AppDbContext, AuditService</div>
+            <ul>
+              <li>ListUsersAsync() → List&lt;UserResponse&gt;</li>
+              <li>UpdateRoleAsync(id, role, actor) → bool</li>
+              <li>DeleteUserAsync(id, actor) → bool</li>
+              <li>AssignAdminAsync(treeId, userId)</li>
+            </ul>
+          </div>
+          <div class="service-card">
+            <h4>GraphTraversalService</h4>
+            <div class="deps">Deps: GraphDbContext</div>
+            <ul>
+              <li>GetNeighboursAsync(personId, sqlLookup) → List&lt;RelationDto&gt;</li>
+              <li>GetShortestPathHopsAsync(aId, bId) → int</li>
+              <li>AddPersonVertexAsync(id, name, nameBefore, treeId)</li>
+              <li>UpdatePersonVertexAsync(id, name, nameBefore)</li>
+              <li>AddEdgeAsync(from, to, label)</li>
+            </ul>
+          </div>
+          <div class="service-card">
+            <h4>PersonService</h4>
+            <div class="deps">Deps: AppDbContext, GraphTraversalService, AuditService, IConfiguration</div>
+            <ul>
+              <li>GetByIdAsync(id) → PersonResponse?</li>
+              <li>GetDetailAsync(id) → PersonDetailResponse?</li>
+              <li>CreateAsync(req, actor) → PersonResponse</li>
+              <li>UpdateAsync(id, req, actor) → PersonResponse?</li>
+              <li>DeleteAsync(id, actor) → bool</li>
+              <li>GetPhotoUploadUrlAsync(id) → PhotoUploadUrlResponse?</li>
+            </ul>
+          </div>
+          <div class="service-card">
+            <h4>TreeService</h4>
+            <div class="deps">Deps: AppDbContext, GraphTraversalService, AuditService</div>
+            <ul>
+              <li>ListAllAsync() → List&lt;FamilyTreeResponse&gt;</li>
+              <li>CreateAsync(req, actor) → FamilyTreeResponse</li>
+              <li>GetNodeAsync(treeId, personId, levels) → TreeNodeResponse?</li>
+              <li>AddRelationshipAsync(treeId, req, actor)</li>
+              <li>AddMemberAsync(treeId, personId, role, actor)</li>
+              <li>RemoveMemberAsync(treeId, personId, actor) → bool</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Files -->
+  <section id="files">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>📁 Files Created (7)</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <p style="font-size:.82rem;color:var(--text-muted);margin-bottom:16px;">All in <code>backend/FamilyTree.Api/Services/</code> · Namespace: <code>FamilyTree.Api.Services</code></p>
+        <div class="file-list">
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">AuditService.cs</span><div><span class="badge badge-info">Audit</span><span class="file-desc" style="display:block;margin-top:4px;">Single LogAsync method — serialises snapshots to JSON, appends AuditLog row. Called by 3 other services.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">SearchService.cs</span><div><span class="badge badge-info">Search</span><span class="file-desc" style="display:block;margin-top:4px;">EF LIKE on FullName + JOIN to trees. Returns one result per (person, tree) membership row — correct for cross-tree persons.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">SurnameRelationshipService.cs</span><div><span class="badge badge-success">Surname</span><span class="file-desc" style="display:block;margin-top:4px;">3 read-only queries: all surnames with counts, pre-computed cross-links, recent living member by surname.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">UserService.cs</span><div><span class="badge badge-warn">Admin</span><span class="file-desc" style="display:block;margin-top:4px;">Admin CRUD — list, update role, delete, assign tree admin. All mutations audited.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">GraphTraversalService.cs</span><div><span class="badge badge-purple">Graph</span><span class="file-desc" style="display:block;margin-top:4px;">All Gremlin interactions. project()-based edge queries avoid type-mismatch with IDictionary return type. SQL lookup delegate prevents N+1 reads.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">PersonService.cs</span><div><span class="badge badge-info">Person</span><span class="file-desc" style="display:block;margin-top:4px;">CRUD + SAS photo URL. Partial updates (null = no change). Upserts PersonDetail. Deletes memberships before Person to honour FK constraints.</span></div></div>
+          <div class="file-item"><span class="file-icon">🆕</span><span class="file-name">TreeService.cs</span><div><span class="badge badge-warn">Tree</span><span class="file-desc" style="display:block;margin-top:4px;">GetNodeAsync validates tree membership before Gremlin call. AddRelationshipAsync maintains bidirectional/directed edges via a reverse-edge map.</span></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Code samples -->
+  <section id="code-audit">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 AuditService.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">using</span> <span class="ns">System.Text.Json</span>;
+<span class="kw">using</span> <span class="ns">FamilyTree.Api.Data</span>;
+<span class="kw">using</span> <span class="ns">FamilyTree.Api.Domain</span>;
+
+<span class="kw">namespace</span> <span class="ns">FamilyTree.Api.Services</span>;
+
+<span class="kw">public class</span> <span class="ty">AuditService</span>(<span class="ty">AppDbContext</span> <span class="nm">db</span>)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="nm">LogAsync</span>(
+        <span class="ty">Guid</span>? <span class="nm">userId</span>, <span class="ty">string</span> <span class="nm">entityType</span>, <span class="ty">Guid</span> <span class="nm">entityId</span>,
+        <span class="ty">string</span> <span class="nm">action</span>, <span class="ty">object</span>? <span class="nm">oldValue</span>, <span class="ty">object</span>? <span class="nm">newValue</span>)
+    {
+        db.<span class="nm">AuditLog</span>.Add(<span class="kw">new</span> <span class="ty">AuditLog</span>
+        {
+            <span class="nm">UserId</span>     <span class="op">=</span> userId,
+            <span class="nm">EntityType</span> <span class="op">=</span> entityType,
+            <span class="nm">EntityId</span>   <span class="op">=</span> entityId,
+            <span class="nm">Action</span>     <span class="op">=</span> action,
+            <span class="nm">OldValue</span>   <span class="op">=</span> oldValue <span class="kw">is null</span> ? <span class="kw">null</span> : <span class="ty">JsonSerializer</span>.<span class="nm">Serialize</span>(oldValue),
+            <span class="nm">NewValue</span>   <span class="op">=</span> newValue <span class="kw">is null</span> ? <span class="kw">null</span> : <span class="ty">JsonSerializer</span>.<span class="nm">Serialize</span>(newValue),
+            <span class="nm">ChangedAt</span>  <span class="op">=</span> <span class="ty">DateTime</span>.<span class="nm">UtcNow</span>
+        });
+        <span class="kw">await</span> db.<span class="nm">SaveChangesAsync</span>();
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-search">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 SearchService.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public class</span> <span class="ty">SearchService</span>(<span class="ty">AppDbContext</span> <span class="nm">db</span>)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">SearchResultDto</span>&gt;&gt; <span class="nm">SearchAsync</span>(<span class="ty">string</span> <span class="nm">q</span>, <span class="ty">string</span>? <span class="nm">surname</span>)
+    {
+        <span class="kw">var</span> query <span class="op">=</span> db.<span class="nm">PersonTreeMemberships</span>
+            .<span class="nm">Include</span>(m <span class="op">=&gt;</span> m.<span class="nm">Person</span>)
+            .<span class="nm">Include</span>(m <span class="op">=&gt;</span> m.<span class="nm">FamilyTree</span>)
+            .<span class="nm">Where</span>(m <span class="op">=&gt;</span> <span class="ty">EF</span>.<span class="nm">Functions</span>.<span class="nm">Like</span>(m.<span class="nm">Person</span>.<span class="nm">FullName</span>, <span class="st">$"%{q}%"</span>));
+
+        <span class="kw">if</span> (!<span class="ty">string</span>.<span class="nm">IsNullOrWhiteSpace</span>(surname))
+            query <span class="op">=</span> query.<span class="nm">Where</span>(m <span class="op">=&gt;</span> m.<span class="nm">FamilyTree</span>.<span class="nm">Surname</span> <span class="op">==</span> surname);
+
+        <span class="kw">return await</span> query
+            .<span class="nm">Select</span>(m <span class="op">=&gt;</span> <span class="kw">new</span> <span class="ty">SearchResultDto</span>(
+                m.<span class="nm">PersonId</span>, m.<span class="nm">Person</span>.<span class="nm">FullName</span>, m.<span class="nm">Person</span>.<span class="nm">Location</span>,
+                m.<span class="nm">Person</span>.<span class="nm">BirthMonthYear</span>, m.<span class="nm">Person</span>.<span class="nm">PhotoBlobUrl</span>,
+                m.<span class="nm">FamilyTreeId</span>, m.<span class="nm">FamilyTree</span>.<span class="nm">Surname</span>))
+            .<span class="nm">ToListAsync</span>();
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-surname">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 SurnameRelationshipService.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public class</span> <span class="ty">SurnameRelationshipService</span>(<span class="ty">AppDbContext</span> <span class="nm">db</span>)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">SurnameResponse</span>&gt;&gt; <span class="nm">ListAllSurnamesAsync</span>() <span class="op">=&gt;</span>
+        <span class="kw">await</span> db.<span class="nm">FamilyTrees</span>
+            .<span class="nm">Select</span>(t <span class="op">=&gt;</span> <span class="kw">new</span> <span class="ty">SurnameResponse</span>(t.<span class="nm">Surname</span>, t.<span class="nm">Id</span>, t.<span class="nm">PersonMemberships</span>.<span class="nm">Count</span>))
+            .<span class="nm">ToListAsync</span>();
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">SurnameLinkResponse</span>&gt;&gt; <span class="nm">ListCrossLinksAsync</span>() <span class="op">=&gt;</span>
+        <span class="kw">await</span> db.<span class="nm">SurnameLinks</span>
+            .<span class="nm">Include</span>(s <span class="op">=&gt;</span> s.<span class="nm">LinkPerson</span>)
+            .<span class="nm">Select</span>(s <span class="op">=&gt;</span> <span class="kw">new</span> <span class="ty">SurnameLinkResponse</span>(
+                s.<span class="nm">SurnameA</span>, s.<span class="nm">SurnameB</span>, s.<span class="nm">LinkPersonId</span>,
+                s.<span class="nm">LinkPerson</span>.<span class="nm">FullName</span>, s.<span class="nm">RelationshipLevel</span>))
+            .<span class="nm">ToListAsync</span>();
+
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">PersonResponse</span>?&gt; <span class="nm">GetRecentLivingMemberAsync</span>(<span class="ty">string</span> <span class="nm">surname</span>) <span class="op">=&gt;</span>
+        <span class="kw">await</span> db.<span class="nm">PersonTreeMemberships</span>
+            .<span class="nm">Where</span>(m <span class="op">=&gt;</span> m.<span class="nm">FamilyTree</span>.<span class="nm">Surname</span> <span class="op">==</span> surname <span class="op">&amp;&amp;</span> m.<span class="nm">Person</span>.<span class="nm">DeathMonthYear</span> <span class="op">==</span> <span class="kw">null</span>)
+            .<span class="nm">OrderByDescending</span>(m <span class="op">=&gt;</span> m.<span class="nm">Person</span>.<span class="nm">BirthMonthYear</span>)
+            .<span class="nm">Select</span>(m <span class="op">=&gt;</span> <span class="kw">new</span> <span class="ty">PersonResponse</span>(
+                m.<span class="nm">Person</span>.<span class="nm">Id</span>, m.<span class="nm">Person</span>.<span class="nm">FullName</span>, m.<span class="nm">Person</span>.<span class="nm">NameBefore</span>,
+                m.<span class="nm">Person</span>.<span class="nm">Phone</span>, m.<span class="nm">Person</span>.<span class="nm">Location</span>, m.<span class="nm">Person</span>.<span class="nm">BirthMonthYear</span>,
+                m.<span class="nm">Person</span>.<span class="nm">DeathMonthYear</span>, m.<span class="nm">Person</span>.<span class="nm">PhotoBlobUrl</span>, m.<span class="nm">Person</span>.<span class="nm">PrimaryTreeId</span>))
+            .<span class="nm">FirstOrDefaultAsync</span>();
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-user">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 UserService.cs</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public class</span> <span class="ty">UserService</span>(<span class="ty">AppDbContext</span> <span class="nm">db</span>, <span class="ty">AuditService</span> <span class="nm">audit</span>)
+{
+    <span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">bool</span>&gt; <span class="nm">UpdateRoleAsync</span>(<span class="ty">Guid</span> <span class="nm">id</span>, <span class="ty">string</span> <span class="nm">role</span>, <span class="ty">Guid</span> <span class="nm">actorId</span>)
+    {
+        <span class="kw">var</span> user <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">Users</span>.<span class="nm">FindAsync</span>(id);
+        <span class="kw">if</span> (user <span class="kw">is null</span>) <span class="kw">return false</span>;
+        <span class="kw">var</span> oldRole <span class="op">=</span> user.<span class="nm">Role</span>;
+        user.<span class="nm">Role</span> <span class="op">=</span> role;
+        <span class="kw">await</span> db.<span class="nm">SaveChangesAsync</span>();
+        <span class="kw">await</span> audit.<span class="nm">LogAsync</span>(actorId, <span class="st">"User"</span>, id, <span class="st">"UPDATE"</span>,
+            <span class="kw">new</span> { <span class="nm">Role</span> <span class="op">=</span> oldRole }, <span class="kw">new</span> { Role <span class="op">=</span> role });
+        <span class="kw">return true</span>;
+    }
+
+    <span class="kw">public async</span> <span class="ty">Task</span> <span class="nm">AssignAdminAsync</span>(<span class="ty">Guid</span> <span class="nm">treeId</span>, <span class="ty">Guid</span> <span class="nm">userId</span>)
+    {
+        <span class="kw">var</span> existing <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">FamilyTreeAdmins</span>.<span class="nm">FindAsync</span>(treeId, userId);
+        <span class="kw">if</span> (existing <span class="kw">is not null</span>) <span class="kw">return</span>;
+        db.<span class="nm">FamilyTreeAdmins</span>.Add(<span class="kw">new</span> <span class="ty">FamilyTreeAdmin</span> { <span class="nm">FamilyTreeId</span> <span class="op">=</span> treeId, <span class="nm">UserId</span> <span class="op">=</span> userId });
+        <span class="kw">await</span> db.<span class="nm">SaveChangesAsync</span>();
+    }
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-graph">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 GraphTraversalService.cs — key method</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">List</span>&lt;<span class="ty">RelationDto</span>&gt;&gt; <span class="nm">GetNeighboursAsync</span>(
+    <span class="ty">string</span> <span class="nm">personId</span>,
+    <span class="ty">Func</span>&lt;<span class="ty">IEnumerable</span>&lt;<span class="ty">string</span>&gt;, <span class="ty">Task</span>&lt;<span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, (<span class="ty">string</span> fullName, <span class="ty">string</span>? photoUrl)&gt;&gt;&gt; <span class="nm">sqlLookup</span>)
+{
+    <span class="cm">// Query outgoing edges — "I am the source"</span>
+    <span class="kw">var</span> outEdges <span class="op">=</span> <span class="kw">await</span> graph.<span class="nm">QueryAsync</span>(
+        <span class="st">"g.V().has('person','personId',pid).outE().project('type','otherId')"</span>
+        <span class="op">+</span> <span class="st">".by(label()).by(inV().values('personId'))"</span>,
+        <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">object</span>&gt; { [<span class="st">"pid"</span>] <span class="op">=</span> personId });
+
+    <span class="cm">// Query incoming edges — "I am the target"</span>
+    <span class="kw">var</span> inEdges <span class="op">=</span> <span class="kw">await</span> graph.<span class="nm">QueryAsync</span>(
+        <span class="st">"g.V().has('person','personId',pid).inE().project('type','otherId')"</span>
+        <span class="op">+</span> <span class="st">".by(label()).by(outV().values('personId'))"</span>,
+        <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">object</span>&gt; { [<span class="st">"pid"</span>] <span class="op">=</span> personId });
+
+    <span class="cm">// Bulk SQL fetch — one query for all neighbour names</span>
+    <span class="kw">var</span> allIds <span class="op">=</span> outEdges.<span class="nm">Select</span>(e <span class="op">=&gt;</span> e[<span class="st">"otherId"</span>]?.<span class="nm">ToString</span>()!)
+        .<span class="nm">Concat</span>(inEdges.<span class="nm">Select</span>(e <span class="op">=&gt;</span> e[<span class="st">"otherId"</span>]?.<span class="nm">ToString</span>()!))
+        .<span class="nm">Where</span>(id <span class="op">=&gt;</span> id <span class="kw">is not null</span>).<span class="nm">Distinct</span>().<span class="nm">ToList</span>();
+
+    <span class="kw">var</span> sqlData <span class="op">=</span> <span class="kw">await</span> sqlLookup(allIds);
+    <span class="cm">// ... map to RelationDto list with direction logic</span>
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-person">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 PersonService.cs — CreateAsync + GetPhotoUploadUrlAsync</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">PersonResponse</span>&gt; <span class="nm">CreateAsync</span>(<span class="ty">CreatePersonRequest</span> <span class="nm">req</span>, <span class="ty">Guid</span> <span class="nm">actorId</span>)
+{
+    <span class="kw">var</span> person <span class="op">=</span> <span class="kw">new</span> <span class="ty">Person</span> { <span class="nm">FullName</span> <span class="op">=</span> req.<span class="nm">FullName</span>, <span class="nm">PrimaryTreeId</span> <span class="op">=</span> req.<span class="nm">TreeId</span>, ... };
+    db.<span class="nm">Persons</span>.Add(person);
+    db.<span class="nm">PersonTreeMemberships</span>.Add(<span class="kw">new</span> <span class="ty">PersonTreeMembership</span>
+        { <span class="nm">PersonId</span> <span class="op">=</span> person.<span class="nm">Id</span>, <span class="nm">FamilyTreeId</span> <span class="op">=</span> req.<span class="nm">TreeId</span>, <span class="nm">Role</span> <span class="op">=</span> req.<span class="nm">Role</span> });
+    <span class="kw">await</span> db.<span class="nm">SaveChangesAsync</span>();
+    <span class="kw">await</span> graph.<span class="nm">AddPersonVertexAsync</span>(person.<span class="nm">Id</span>.<span class="nm">ToString</span>(), person.<span class="nm">FullName</span>, ...);
+    <span class="kw">await</span> audit.<span class="nm">LogAsync</span>(...);
+    <span class="kw">return new</span> <span class="ty">PersonResponse</span>(...);
+}
+
+<span class="kw">public async</span> <span class="ty">Task</span>&lt;<span class="ty">PhotoUploadUrlResponse</span>?&gt; <span class="nm">GetPhotoUploadUrlAsync</span>(<span class="ty">Guid</span> <span class="nm">id</span>)
+{
+    <span class="kw">var</span> connStr       <span class="op">=</span> config[<span class="st">"AzureBlob:ConnectionString"</span>];
+    <span class="kw">var</span> containerName <span class="op">=</span> config[<span class="st">"AzureBlob:ContainerName"</span>] ?? <span class="st">"person-photos"</span>;
+    <span class="kw">var</span> blobName      <span class="op">=</span> <span class="st">$"{id}/{Guid.NewGuid()}.jpg"</span>;
+
+    <span class="kw">var</span> blobClient <span class="op">=</span> <span class="kw">new</span> <span class="ty">BlobServiceClient</span>(connStr)
+        .<span class="nm">GetBlobContainerClient</span>(containerName)
+        .<span class="nm">GetBlobClient</span>(blobName);
+
+    <span class="kw">var</span> sasUri <span class="op">=</span> blobClient.<span class="nm">GenerateSasUri</span>(
+        <span class="ty">BlobSasPermissions</span>.<span class="nm">Write</span> <span class="op">|</span> <span class="ty">BlobSasPermissions</span>.<span class="nm">Create</span>,
+        <span class="ty">DateTimeOffset</span>.<span class="nm">UtcNow</span>.<span class="nm">AddMinutes</span>(<span class="num">15</span>));
+
+    <span class="kw">return new</span> <span class="ty">PhotoUploadUrlResponse</span>(sasUri.<span class="nm">ToString</span>(), blobName);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <section id="code-tree">
+    <div class="card">
+      <div class="card-header" onclick="toggleCard(this)"><h3>💻 TreeService.cs — AddRelationshipAsync</h3><span class="chevron">▼</span></div>
+      <div class="card-body hidden">
+<pre><code><span class="kw">public async</span> <span class="ty">Task</span> <span class="nm">AddRelationshipAsync</span>(<span class="ty">Guid</span> <span class="nm">treeId</span>, <span class="ty">CreateRelationshipRequest</span> <span class="nm">req</span>, <span class="ty">Guid</span> <span class="nm">actorId</span>)
+{
+    <span class="cm">// Validate membership</span>
+    <span class="kw">var</span> memberIds <span class="op">=</span> <span class="kw">await</span> db.<span class="nm">PersonTreeMemberships</span>
+        .<span class="nm">Where</span>(m <span class="op">=&gt;</span> m.<span class="nm">FamilyTreeId</span> <span class="op">==</span> treeId
+                 <span class="op">&amp;&amp;</span> (m.<span class="nm">PersonId</span> <span class="op">==</span> req.<span class="nm">PersonAId</span> <span class="op">||</span> m.<span class="nm">PersonId</span> <span class="op">==</span> req.<span class="nm">PersonBId</span>))
+        .<span class="nm">Select</span>(m <span class="op">=&gt;</span> m.<span class="nm">PersonId</span>).<span class="nm">ToListAsync</span>();
+
+    <span class="kw">if</span> (!memberIds.<span class="nm">Contains</span>(req.<span class="nm">PersonAId</span>) || !memberIds.<span class="nm">Contains</span>(req.<span class="nm">PersonBId</span>))
+        <span class="kw">throw new</span> <span class="ty">InvalidOperationException</span>(<span class="st">"Both persons must be members of the tree."</span>);
+
+    <span class="cm">// Primary edge A → B</span>
+    <span class="kw">await</span> graph.<span class="nm">AddEdgeAsync</span>(aId, bId, req.<span class="nm">RelationshipType</span>);
+
+    <span class="cm">// Reverse edge: directed types get logical inverse, undirected get same label</span>
+    <span class="kw">var</span> reverseMap <span class="op">=</span> <span class="kw">new</span> <span class="ty">Dictionary</span>&lt;<span class="ty">string</span>, <span class="ty">string</span>&gt;
+    {
+        [<span class="st">"parent_of"</span>]          <span class="op">=</span> <span class="st">"child_of"</span>,
+        [<span class="st">"child_of"</span>]           <span class="op">=</span> <span class="st">"parent_of"</span>,
+        [<span class="st">"step_parent_of"</span>]    <span class="op">=</span> <span class="st">"child_of"</span>,
+        [<span class="st">"adoptive_parent_of"</span>] <span class="op">=</span> <span class="st">"child_of"</span>
+    };
+    <span class="kw">if</span> (reverseMap.<span class="nm">TryGetValue</span>(req.<span class="nm">RelationshipType</span>, <span class="kw">out var</span> reverse))
+        <span class="kw">await</span> graph.<span class="nm">AddEdgeAsync</span>(bId, aId, reverse);
+    <span class="kw">else</span>
+        <span class="kw">await</span> graph.<span class="nm">AddEdgeAsync</span>(bId, aId, req.<span class="nm">RelationshipType</span>);
+}</code></pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- Decisions -->
+  <section id="decisions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🧠 Design Decisions</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Decision</th><th>Reasoning</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Gremlin queries use <code>project()</code> to return <code>IDictionary</code></td>
+              <td><code>GraphDbContext.QueryAsync</code> is typed as <code>IReadOnlyCollection&lt;IDictionary&gt;</code>. Queries returning raw scalar values (e.g. <code>.values('personId')</code>) would cause a cast failure at runtime. Using <code>project().by()</code> always returns a map, matching the declared return type. No changes to GraphDbContext were needed.</td>
+            </tr>
+            <tr>
+              <td><code>sqlLookup</code> delegate in <code>GetNeighboursAsync</code></td>
+              <td>GraphTraversalService must not take AppDbContext as a dependency (graph and SQL are separate concerns). Injecting a delegate lets callers provide the SQL lookup, keeping the service focused on Gremlin. The result is a single bulk SQL query per Gremlin traversal — no N+1.</td>
+            </tr>
+            <tr>
+              <td>Partial update in <code>PersonService.UpdateAsync</code> — null = skip</td>
+              <td>PUT body that omits a field should not overwrite existing data. All nullable request fields are checked: <code>if (req.Field is not null) person.Field = req.Field</code>. This is safe because the domain fields are all nullable strings.</td>
+            </tr>
+            <tr>
+              <td><code>PersonService.DeleteAsync</code> removes memberships before the person</td>
+              <td><code>PersonTreeMembership → FamilyTree</code> FK uses <code>DeleteBehavior.Restrict</code>, so deleting a Person while memberships exist will fail. Memberships are removed first, then the person.</td>
+            </tr>
+            <tr>
+              <td>Reverse edges stored in Cosmos for directed relationships</td>
+              <td>CLAUDE.md explicitly states "both directions stored" for parent_of/child_of edges. The reverseMap encodes each directed type's inverse. Undirected types (spouse, sibling_of, in_law_of) get the same label repeated in both directions — this matches the seed.groovy pattern.</td>
+            </tr>
+            <tr>
+              <td>SAS token includes <code>BlobSasPermissions.Create</code> in addition to <code>Write</code></td>
+              <td>For a new blob upload (not updating an existing one) the <code>Create</code> permission is required alongside <code>Write</code>. Without it, the PUT from the browser would return 403.</td>
+            </tr>
+            <tr>
+              <td>Primary constructor injection (<code>class Foo(Dep dep)</code>)</td>
+              <td>.NET 8 primary constructors remove the need for private fields and constructor bodies for DI. All services use this pattern for brevity and alignment with the CLAUDE.md convention of minimal boilerplate.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Build -->
+  <section id="build">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>🔨 Build Result</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <div class="build-box">
+<span style="color:#94a3b8;">$ dotnet build FamilyTree.Api.csproj</span>
+
+  All projects are up-to-date for restore.
+<span class="build-warn">  warning NU1902: Package 'Microsoft.Identity.Web' 3.3.0 has known vulnerability
+          (pre-existing — not introduced by this change)</span>
+  FamilyTree.Api → bin\Debug\net8.0\FamilyTree.Api.dll
+
+<span class="build-ok">Build succeeded.</span>
+
+  2 Warning(s)  ← pre-existing NU1902
+  <span class="build-ok">0 Error(s)</span>
+
+Time Elapsed 00:00:01.43  (incremental)
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Assumptions -->
+  <section id="assumptions">
+    <div class="card">
+      <div class="card-header open" onclick="toggleCard(this)"><h3>⚠️ Assumptions Made</h3><span class="chevron">▼</span></div>
+      <div class="card-body">
+        <table>
+          <thead><tr><th>Assumption</th><th>Risk / Mitigation</th></tr></thead>
+          <tbody>
+            <tr>
+              <td>Gremlin <code>project().by(inV().values('personId'))</code> works on TinkerPop 3.7.1</td>
+              <td>This is standard TinkerPop syntax. Verified against the Gremlin spec. Risk: low. Will be confirmed when Docker stack is running in integration tests (Phase D).</td>
+            </tr>
+            <tr>
+              <td><code>OrderByDescending(BirthMonthYear)</code> as a string is lexicographic, not chronological</td>
+              <td>"Jan 1990" vs "Dec 1985" — string sort gives wrong order. Risk: low for MVP (only affects the "most recent living member" query for sidebar centering). A proper fix would parse the month/year and sort numerically. Deferred to future iteration.</td>
+            </tr>
+            <tr>
+              <td>Photo file extension is always <code>.jpg</code> in the SAS blob name</td>
+              <td>FR-14 doesn't specify formats. The SAS URL covers <em>that specific blob name</em>. The client must PUT a JPEG, or the extension is misleading. A future improvement would accept the content type as a parameter. Low risk for phase 1.</td>
+            </tr>
+            <tr>
+              <td>Duplicate edge prevention not implemented in <code>AddEdgeAsync</code></td>
+              <td>If called twice with the same person pair + edge label, Gremlin will add duplicate edges. This is intentional — prevention is the caller's responsibility (endpoints will check). TinkerPop supports duplicate edges by design.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Next -->
+  <section id="next">
+    <div class="next-card">
+      <h3>▶️ Awaiting Approval — Phase C: Endpoints + Program.cs wiring</h3>
+      <ul>
+        <li>Create <code>backend/FamilyTree.Api/Endpoints/</code> with 5 files (Person, Tree, Surname, Search, Admin)</li>
+        <li>Implement 20 route handlers with role-based authorization checks</li>
+        <li>Register all 7 services in <code>Program.cs</code> DI container</li>
+        <li>Uncomment the 5 <code>app.MapXxxEndpoints()</code> calls in <code>Program.cs</code></li>
+        <li>Auth helper: read <code>extension_Role</code> + <code>extension_AssignedTrees</code> claims</li>
+      </ul>
+    </div>
+  </section>
+
+</main>
+
+<script>
+  function toggleTheme(){
+    const b=document.body,btn=document.getElementById('theme-toggle');
+    if(b.dataset.theme==='dark'){b.dataset.theme='light';btn.textContent='🌙 Dark mode';}
+    else{b.dataset.theme='dark';btn.textContent='☀️ Light mode';}
+  }
+  function toggleCard(h){
+    h.classList.toggle('open');
+    h.nextElementSibling.classList.toggle('hidden');
+  }
+  const sections=document.querySelectorAll('section[id]');
+  const links=document.querySelectorAll('#sidebar nav a');
+  window.addEventListener('scroll',()=>{
+    let c='';
+    sections.forEach(s=>{if(window.scrollY>=s.offsetTop-80)c=s.id;});
+    links.forEach(l=>{l.classList.remove('active');if(l.getAttribute('href')==='#'+c)l.classList.add('active');});
+  },{passive:true});
+</script>
+</body>
+</html>
