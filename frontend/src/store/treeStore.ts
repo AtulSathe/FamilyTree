@@ -195,6 +195,7 @@ interface TreeStore {
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   loadFocalNode: (treeId: string, personId: string) => Promise<void>
+  setActiveTreeEmpty: (treeId: string) => void
   expandNode: (personId: string, levels?: number) => Promise<void>
   collapseNode: (personId: string) => void
   clearTree: () => void
@@ -246,6 +247,18 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
       })
     }
   },
+
+  setActiveTreeEmpty: (treeId) =>
+    set({
+      activeFamilyTreeId: treeId,
+      nodes: [],
+      edges: [],
+      selectedNodeId: null,
+      expandedPersonIds: new Set(),
+      expansionDiffs: {},
+      error: null,
+      loading: false,
+    }),
 
   expandNode: async (personId, levels = 1) => {
     const treeId = get().activeFamilyTreeId

@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import { Avatar } from '../common/Avatar'
 import { useTreeStore, type PersonNodeData } from '../../store/treeStore'
 import { useAuth } from '../../hooks/useAuth'
+import { useCrossTreeMap } from '../../hooks/useCrossTreeMap'
 
 export const PersonNode = memo(({ data, selected }: NodeProps) => {
   const d = data as PersonNodeData
@@ -20,14 +21,18 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
     setSelectedNodeId,
   } = useTreeStore()
   const { canEditTree } = useAuth()
+  const crossTreeMap = useCrossTreeMap()
   const canEdit = !!activeFamilyTreeId && canEditTree(activeFamilyTreeId)
   const isExpanded = expandedPersonIds.has(d.personId)
+  const crossTreeSurnames = crossTreeMap.get(d.personId) ?? null
+  const isCrossTree = !!crossTreeSurnames && crossTreeSurnames.length > 0
   const [hovered, setHovered] = useState(false)
 
   const tooltipLines = [
     d.location       ? `📍 ${d.location}` : null,
     d.birthMonthYear ? `🎂 ${d.birthMonthYear}` : null,
     d.deathMonthYear ? `✝ ${d.deathMonthYear}` : null,
+    isCrossTree      ? `🌳 ${crossTreeSurnames!.join(' · ')}` : null,
   ].filter(Boolean) as string[]
 
   function openDetails() { navigate(`/person/${d.personId}`) }
@@ -53,7 +58,9 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
       onMouseLeave={() => setHovered(false)}
       className={`relative flex flex-col items-center gap-1 cursor-pointer select-none rounded-lg p-1 w-[90px] outline-none focus:ring-2 focus:ring-blue-500 transition-shadow ${
         selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
-      } ${d.isCenter ? 'ring-2 ring-indigo-400 ring-offset-2' : ''}`}
+      } ${d.isCenter ? 'ring-2 ring-indigo-400 ring-offset-2' : ''} ${
+        isCrossTree && !d.isCenter && !selected ? 'ring-2 ring-amber-400 ring-offset-1' : ''
+      }`}
     >
       <Handle type="target" position={Position.Top} className="opacity-0" />
 
@@ -99,6 +106,7 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
                 type="button"
                 onClick={e => { e.stopPropagation(); setAddRelationTarget(d.personId) }}
                 className="text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-full w-5 h-5 flex items-center justify-center leading-none focus:outline-none focus:ring-2 focus:ring-green-400"
+                title={t('addRelation')}
                 aria-label={`${t('addRelation')} – ${d.fullName}`}
               >
                 ✚
@@ -107,6 +115,7 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
                 type="button"
                 onClick={e => { e.stopPropagation(); setRemoveRelationTarget(d.personId) }}
                 className="text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-full w-5 h-5 flex items-center justify-center leading-none font-bold focus:outline-none focus:ring-2 focus:ring-red-400"
+                title={t('removeRelation')}
                 aria-label={`${t('removeRelation')} – ${d.fullName}`}
               >
                 −

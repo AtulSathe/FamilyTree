@@ -11,7 +11,10 @@ import { Modal } from '../common/Modal'
 import { Button } from '../common/Button'
 import PersonForm from '../person/PersonForm'
 import { useDeletePerson } from '../../api/persons'
+import { useRemovePersonFromTree } from '../../api/trees'
+import { useSurnames } from '../../api/surnames'
 import { useAuth } from '../../hooks/useAuth'
+import MembersListDrawer from '../members/MembersListDrawer'
 
 const nodeTypes = { person: PersonNode }
 
@@ -22,20 +25,29 @@ export default function TreeCanvas() {
     addRelationTarget, removeRelationTarget,
     activeFamilyTreeId, selectedNodeId,
     setSelectedNodeId, removePersonFromCanvas,
+    loadFocalNode,
     error, clearError,
   } = useTreeStore()
 
   const { canEditTree, isPowerAdmin } = useAuth()
   const { t } = useTranslation('tree')
   const { t: tCommon } = useTranslation('common')
+  const { data: surnames = [] } = useSurnames()
   const canEditActiveTree = !!activeFamilyTreeId && canEditTree(activeFamilyTreeId)
+  const activeSurname = activeFamilyTreeId
+    ? surnames.find(s => s.treeId === activeFamilyTreeId)?.surname
+    : undefined
   const [showAddPerson, setShowAddPerson] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [showRemoveFromTreeConfirm, setShowRemoveFromTreeConfirm] = useState(false)
+  const [removeFromTreeError, setRemoveFromTreeError] = useState('')
+  const [showMembers, setShowMembers] = useState(false)
 
   const selectedNode = nodes.find(n => n.id === selectedNodeId)
   const selectedName = (selectedNode?.data as { fullName?: string })?.fullName ?? ''
 
   const deleteMutation = useDeletePerson(selectedNodeId ?? '')
+  const removeFromTreeMutation = useRemovePersonFromTree(activeFamilyTreeId ?? '')
 
   const onNodeClick: NodeMouseHandler = (_, node) => setSelectedNodeId(node.id)
   const onPaneClick = () => setSelectedNodeId(null)
@@ -47,6 +59,18 @@ export default function TreeCanvas() {
     setShowDeleteConfirm(false)
   }
 
+  async function handleRemoveFromTreeConfirm() {
+    if (!selectedNodeId || !activeFamilyTreeId) return
+    setRemoveFromTreeError('')
+    try {
+      await removeFromTreeMutation.mutateAsync(selectedNodeId)
+      removePersonFromCanvas(selectedNodeId)
+      setShowRemoveFromTreeConfirm(false)
+    } catch {
+      setRemoveFromTreeError(t('failedToRemoveFromTree'))
+    }
+  }
+
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400">
@@ -56,25 +80,71 @@ export default function TreeCanvas() {
   }
 
   if (nodes.length === 0) {
+    const isEmptyActiveTree = !!activeFamilyTreeId && !error
     return (
-      <div className="relative flex h-full items-center justify-center flex-col gap-3 text-gray-400">
-        <span className="text-5xl">🌳</span>
-        <p className="text-sm">{error ? t(error.i18nKey) : t('noTreeSelectedLong')}</p>
-        {error && (
+      <div className="flex h-full w-full">
+        <div className="flex-1 relative flex items-center justify-center flex-col gap-3 text-gray-400">
+          <span className="text-5xl">🌳</span>
+          <p className="text-sm">
+            {error
+              ? t(error.i18nKey)
+              : isEmptyActiveTree && activeSurname
+                ? t('emptyTreePrompt', { surname: activeSurname })
+                : t('noTreeSelectedLong')}
+          </p>
+          {error && (
+            <button
+              type="button"
+              onClick={clearError}
+              className="text-xs text-blue-600 hover:underline"
+            >
+              {tCommon('retry')}
+            </button>
+          )}
+          {isEmptyActiveTree && canEditActiveTree && (
+            <button
+              type="button"
+              onClick={() => setShowAddPerson(true)}
+              className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-green-400"
+            >
+              <span className="text-base leading-none">＋</span>
+              {activeSurname
+                ? t('addFirstPersonTo', { surname: activeSurname })
+                : t('addPerson')}
+            </button>
+          )}
           <button
             type="button"
-            onClick={clearError}
-            className="text-xs text-blue-600 hover:underline"
+            onClick={() => setShowMembers(s => !s)}
+            className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+            title={showMembers ? t('hideAllMembers') : t('showAllMembers')}
           >
-            {tCommon('retry')}
+            <span className="text-base leading-none">☰</span> {t('allMembers')}
           </button>
+        </div>
+        <MembersListDrawer open={showMembers} onClose={() => setShowMembers(false)} />
+        {showAddPerson && activeFamilyTreeId && (
+          <Modal open title={t('addNewPerson')} onClose={() => setShowAddPerson(false)}>
+            <PersonForm
+              defaultTreeId={activeFamilyTreeId}
+              hideTrees
+              onSuccess={(created) => {
+                setShowAddPerson(false)
+                if (created && activeFamilyTreeId) {
+                  loadFocalNode(activeFamilyTreeId, created.id)
+                }
+              }}
+              onCancel={() => setShowAddPerson(false)}
+            />
+          </Modal>
         )}
       </div>
     )
   }
 
   return (
-    <>
+    <div className="flex h-full w-full">
+      <div className="flex-1 relative">
       {error && (
         <div
           role="alert"
@@ -111,19 +181,34 @@ export default function TreeCanvas() {
         <Controls />
 
         {/* Floating action panel */}
-        {canEditActiveTree && (
-          <Panel position="top-right">
-            <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2">
-              <button
-                type="button"
-                onClick={() => setShowAddPerson(true)}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition-colors"
-                title={t('addPersonTooltip')}
-              >
-                <span className="text-base leading-none">＋</span> {t('addPerson')}
-              </button>
+        <Panel position="top-right">
+          <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2">
+            <button
+              type="button"
+              onClick={() => setShowMembers(s => !s)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400 ${
+                showMembers
+                  ? 'bg-blue-100 text-blue-800'
+                  : 'bg-blue-50 hover:bg-blue-100 text-blue-700'
+              }`}
+              title={showMembers ? t('hideAllMembers') : t('showAllMembers')}
+              aria-pressed={showMembers}
+            >
+              <span className="text-base leading-none">☰</span> {t('allMembers')}
+            </button>
 
-              {isPowerAdmin && (
+            {canEditActiveTree && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setShowAddPerson(true)}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition-colors"
+                  title={t('addPersonTooltip')}
+                >
+                  <span className="text-base leading-none">＋</span> {t('addPerson')}
+                </button>
+
+                {isPowerAdmin ? (
                 <button
                   type="button"
                   onClick={() => selectedNodeId && setShowDeleteConfirm(true)}
@@ -136,10 +221,24 @@ export default function TreeCanvas() {
                     ? `${tCommon('delete')} ${selectedName}`
                     : t('deleteSelectNode')}
                 </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => selectedNodeId && setShowRemoveFromTreeConfirm(true)}
+                  disabled={!selectedNodeId}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  title={selectedNodeId ? `${t('removeFromTree')} – ${selectedName}` : t('deleteSelectFirst')}
+                >
+                  <span className="text-base leading-none">↗</span>
+                  {selectedNodeId
+                    ? `${t('removeFromTree')} – ${selectedName}`
+                    : t('removeFromTreeSelectNode')}
+                </button>
               )}
-            </div>
-          </Panel>
-        )}
+              </>
+            )}
+          </div>
+        </Panel>
       </ReactFlow>
 
       {/* Add relation modal */}
@@ -184,6 +283,41 @@ export default function TreeCanvas() {
           </div>
         </Modal>
       )}
-    </>
+
+      {/* Remove-from-tree confirmation modal (Family Admin) */}
+      {showRemoveFromTreeConfirm && selectedNodeId && (
+        <Modal
+          open
+          title={t('removeFromTreeTitle')}
+          onClose={() => { setShowRemoveFromTreeConfirm(false); setRemoveFromTreeError('') }}
+        >
+          <div className="space-y-4">
+            <p className="text-sm text-gray-700">
+              {t('removeFromTreePrompt', { name: selectedName })}
+            </p>
+            {removeFromTreeError && (
+              <p className="text-xs text-red-500">{removeFromTreeError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="secondary"
+                onClick={() => { setShowRemoveFromTreeConfirm(false); setRemoveFromTreeError('') }}
+              >
+                {tCommon('cancel')}
+              </Button>
+              <Button
+                variant="danger"
+                loading={removeFromTreeMutation.isPending}
+                onClick={handleRemoveFromTreeConfirm}
+              >
+                {t('removeFromTree')}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+      </div>
+      <MembersListDrawer open={showMembers} onClose={() => setShowMembers(false)} />
+    </div>
   )
 }

@@ -21,7 +21,10 @@ export const useCreateTree = () => {
   return useMutation({
     mutationFn: (payload: { surname: string; description?: string }) =>
       api.post<FamilyTree>('/trees', payload).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['trees'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['trees'] })
+      qc.invalidateQueries({ queryKey: ['surnames'] })
+    },
   })
 }
 
@@ -36,3 +39,15 @@ export const useRemoveRelationship = (treeId: string) =>
     mutationFn: (payload: { personAId: string; personBId: string }) =>
       api.delete(`/trees/${treeId}/relationships`, { data: payload }),
   })
+
+export const useRemovePersonFromTree = (treeId: string) => {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (personId: string) =>
+      api.delete(`/trees/${treeId}/members/${personId}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['surnames'] })
+      qc.invalidateQueries({ queryKey: ['trees'] })
+    },
+  })
+}

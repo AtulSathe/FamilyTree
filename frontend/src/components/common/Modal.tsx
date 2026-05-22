@@ -24,20 +24,29 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const previouslyFocused = useRef<HTMLElement | null>(null)
 
+  // Focus management — depends only on `open` so parent re-renders (which
+  // change the `onClose` identity) do not yank focus out of modal inputs.
   useEffect(() => {
     if (!open) return
     previouslyFocused.current = document.activeElement as HTMLElement | null
 
-    // focus the first focusable element inside the modal, falling back to the container
-    const focusFirst = () => {
+    const id = window.setTimeout(() => {
       const root = containerRef.current
       if (!root) return
       const first = root.querySelector<HTMLElement>(FOCUSABLE_SELECTOR)
       ;(first ?? root).focus()
-    }
-    // wait a tick so portal children are mounted
-    const id = window.setTimeout(focusFirst, 0)
+    }, 0)
 
+    return () => {
+      window.clearTimeout(id)
+      previouslyFocused.current?.focus?.()
+    }
+  }, [open])
+
+  // Key handler — separate effect so re-binding the listener when `onClose`
+  // identity changes is cheap and has no focus side-effects.
+  useEffect(() => {
+    if (!open) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') { onClose(); return }
       if (e.key !== 'Tab') return
@@ -57,13 +66,8 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         first.focus()
       }
     }
-
     window.addEventListener('keydown', onKey)
-    return () => {
-      window.clearTimeout(id)
-      window.removeEventListener('keydown', onKey)
-      previouslyFocused.current?.focus?.()
-    }
+    return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
 
   if (!open) return null

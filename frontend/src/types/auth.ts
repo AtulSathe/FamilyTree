@@ -6,4 +6,6 @@ export interface AuthUser {
   fullName: string
   role: UserRole
   assignedTrees: string[]
+  /** Optional link to a Person row. Set when an auth account corresponds to a family member. */
+  personId?: string
 }

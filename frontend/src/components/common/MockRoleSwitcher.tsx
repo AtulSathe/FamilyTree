@@ -28,6 +28,7 @@ const OPTIONS: RoleOption[] = [
       fullName: 'Ramesh Sathe',
       role: 'family_admin',
       assignedTrees: [SATHE],
+      personId: '20000000-0000-0000-0000-000000000018',
     },
   },
   {
@@ -38,6 +39,7 @@ const OPTIONS: RoleOption[] = [
       fullName: 'Govind Panse',
       role: 'family_admin',
       assignedTrees: [PANSE],
+      personId: '20000000-0000-0000-0000-000000000012',
     },
   },
   {

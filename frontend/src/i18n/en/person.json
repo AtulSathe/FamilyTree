@@ -21,6 +21,8 @@
   "customFields": "Additional Info",
   "tree": "Family Tree",
   "selectTreeOption": "— select —",
+  "newSurnameOption": "+ New surname…",
+  "newSurnamePlaceholder": "Type a new surname",
   "edit": "Edit",
   "save": "Save",
   "create": "Create",

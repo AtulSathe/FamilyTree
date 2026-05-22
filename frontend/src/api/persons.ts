@@ -27,7 +27,11 @@ export const useCreatePerson = () => {
   return useMutation({
     mutationFn: (payload: CreatePersonPayload) =>
       api.post<Person>('/persons', payload).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['persons'] }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['persons'] })
+      qc.invalidateQueries({ queryKey: ['surnames'] })
+      qc.invalidateQueries({ queryKey: ['trees'] })
+    },
   })
 }
 
@@ -55,6 +59,12 @@ export const useRequestPhotoUploadUrl = (id: string) =>
   useMutation({
     mutationFn: () =>
       api.post<PhotoUploadUrlResponse>(`/persons/${id}/photo-upload-url`).then(r => r.data),
+  })
+
+export const useAllPersons = () =>
+  useQuery({
+    queryKey: ['persons'],
+    queryFn: () => api.get<Person[]>('/persons').then(r => r.data),
   })
 
 export const useSearchExisting = (q: string) =>

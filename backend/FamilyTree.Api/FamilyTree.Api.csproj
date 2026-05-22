@@ -27,7 +27,7 @@
     <PackageReference Include="Azure.Storage.Blobs" Version="12.22.2" />
 
     <!-- Azure AD B2C auth -->
-    <PackageReference Include="Microsoft.Identity.Web" Version="3.3.0" />
+    <PackageReference Include="Microsoft.Identity.Web" Version="4.9.0" />
 
     <!-- Swagger / OpenAPI -->
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.9.0" />

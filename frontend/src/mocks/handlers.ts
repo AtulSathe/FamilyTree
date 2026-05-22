@@ -41,6 +41,9 @@ const persons: Record<string, Person> = {
   '20000000-0000-0000-0000-000000000015': { id: '20000000-0000-0000-0000-000000000015', fullName: 'Vijaya Panse',    nameBefore: 'Apte',     phone: null,             location: 'Pune, Maharashtra',    birthMonthYear: 'Feb 1918', deathMonthYear: 'Aug 1995', photoBlobUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=VijayaPanse', primaryTreeId: PANSE },
   '20000000-0000-0000-0000-000000000016': { id: '20000000-0000-0000-0000-000000000016', fullName: 'Arun Panse',      nameBefore: null,       phone: '+91-9876500001', location: 'Pune, Maharashtra',    birthMonthYear: 'Jun 1960', deathMonthYear: null,       photoBlobUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=ArunPanse',   primaryTreeId: PANSE },
   '20000000-0000-0000-0000-000000000017': { id: '20000000-0000-0000-0000-000000000017', fullName: 'Snehal Panse',    nameBefore: null,       phone: '+91-9876500002', location: 'Hyderabad, Telangana', birthMonthYear: 'Feb 1988', deathMonthYear: null,       photoBlobUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SnehalPanse', primaryTreeId: PANSE },
+  // Ramesh Sathe — the Sathe Family Admin (auth user 00000000-...0002 links here via personId).
+  // Modeled as a third child of Ramchandra & Sumitra (sibling of Suresh and Anand).
+  '20000000-0000-0000-0000-000000000018': { id: '20000000-0000-0000-0000-000000000018', fullName: 'Ramesh Sathe',    nameBefore: null,       phone: '+91-9876543299', location: 'Pune, Maharashtra',    birthMonthYear: 'Oct 1958', deathMonthYear: null,       photoBlobUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=RameshSathe', primaryTreeId: SATHE },
 }
 
 // ── Helper — build a RelationDto from the persons map ──────────────────────
@@ -71,17 +74,20 @@ const graph: Record<string, GraphEntry> = {
     rel('20000000-0000-0000-0000-000000000004', 'spouse',    'both'),
     rel('20000000-0000-0000-0000-000000000005', 'parent_of', 'out'),
     rel('20000000-0000-0000-0000-000000000007', 'parent_of', 'out'),
+    rel('20000000-0000-0000-0000-000000000018', 'parent_of', 'out'),
   ]},
   '20000000-0000-0000-0000-000000000004': { relations: [ // Sumitra
     rel('20000000-0000-0000-0000-000000000003', 'spouse',    'both'),
     rel('20000000-0000-0000-0000-000000000005', 'parent_of', 'out'),
     rel('20000000-0000-0000-0000-000000000007', 'parent_of', 'out'),
+    rel('20000000-0000-0000-0000-000000000018', 'parent_of', 'out'),
   ]},
   '20000000-0000-0000-0000-000000000005': { relations: [ // Suresh
     rel('20000000-0000-0000-0000-000000000003', 'parent_of', 'in'),
     rel('20000000-0000-0000-0000-000000000004', 'parent_of', 'in'),
     rel('20000000-0000-0000-0000-000000000006', 'spouse',    'both'),
     rel('20000000-0000-0000-0000-000000000007', 'sibling_of','both'),
+    rel('20000000-0000-0000-0000-000000000018', 'sibling_of','both'),
     rel('20000000-0000-0000-0000-000000000008', 'parent_of', 'out'),
     rel('20000000-0000-0000-0000-000000000009', 'parent_of', 'out'),
   ]},
@@ -94,6 +100,13 @@ const graph: Record<string, GraphEntry> = {
     rel('20000000-0000-0000-0000-000000000003', 'parent_of', 'in'),
     rel('20000000-0000-0000-0000-000000000004', 'parent_of', 'in'),
     rel('20000000-0000-0000-0000-000000000005', 'sibling_of','both'),
+    rel('20000000-0000-0000-0000-000000000018', 'sibling_of','both'),
+  ]},
+  '20000000-0000-0000-0000-000000000018': { relations: [ // Ramesh (Sathe Family Admin)
+    rel('20000000-0000-0000-0000-000000000003', 'parent_of', 'in'),
+    rel('20000000-0000-0000-0000-000000000004', 'parent_of', 'in'),
+    rel('20000000-0000-0000-0000-000000000005', 'sibling_of','both'),
+    rel('20000000-0000-0000-0000-000000000007', 'sibling_of','both'),
   ]},
   '20000000-0000-0000-0000-000000000008': { relations: [ // Rahul
     rel('20000000-0000-0000-0000-000000000005', 'parent_of', 'in'),
@@ -149,17 +162,80 @@ const graph: Record<string, GraphEntry> = {
   ]},
 }
 
+// ── Mutable tree registry — extended by POST /trees ───────────────────────
+interface TreeRow {
+  id: string
+  surname: string
+  description: string
+  memberCount: number
+}
+
+const trees: TreeRow[] = [
+  { id: SATHE, surname: 'Sathe', description: 'Sathe family from Pune, Maharashtra', memberCount: 10 },
+  { id: PANSE, surname: 'Panse', description: 'Panse family from Nashik, Maharashtra', memberCount: 8 },
+]
+
+// Family admins per tree (person ids). Mirrors FamilyTreeAdmins joined on Users.PersonId.
+// Persisted to localStorage so promotions/demotions survive page reloads in mock mode.
+const ADMIN_LS_KEY = 'mock-tree-admins'
+
+function seedAdmins(): Record<string, Set<string>> {
+  return {
+    [SATHE]: new Set(['20000000-0000-0000-0000-000000000018']), // Ramesh Sathe
+    [PANSE]: new Set(['20000000-0000-0000-0000-000000000012']), // Govind Panse
+  }
+}
+
+function loadAdmins(): Record<string, Set<string>> {
+  if (typeof localStorage === 'undefined') return seedAdmins()
+  const raw = localStorage.getItem(ADMIN_LS_KEY)
+  if (!raw) return seedAdmins()
+  try {
+    const parsed = JSON.parse(raw) as Record<string, string[]>
+    return Object.fromEntries(
+      Object.entries(parsed).map(([k, v]) => [k, new Set(v)]),
+    )
+  } catch {
+    return seedAdmins()
+  }
+}
+
+function saveAdmins() {
+  if (typeof localStorage === 'undefined') return
+  const dump = Object.fromEntries(
+    Object.entries(treeAdmins).map(([k, v]) => [k, Array.from(v)]),
+  )
+  localStorage.setItem(ADMIN_LS_KEY, JSON.stringify(dump))
+}
+
+const treeAdmins: Record<string, Set<string>> = loadAdmins()
+
 // ── Handlers ────────────────────────────────────────────────────────────────
 
 export const handlers = [
 
   // List trees
-  http.get(`${BASE}/trees`, () =>
-    HttpResponse.json([
-      { id: SATHE, surname: 'Sathe', description: 'Sathe family from Pune, Maharashtra', memberCount: 9 },
-      { id: PANSE, surname: 'Panse', description: 'Panse family from Nashik, Maharashtra', memberCount: 8 },
-    ]),
-  ),
+  http.get(`${BASE}/trees`, () => HttpResponse.json(trees)),
+
+  // Create tree — appends to in-memory list so subsequent GET /trees and /surnames reflect it
+  http.post(`${BASE}/trees`, async ({ request }) => {
+    const body = await request.json() as { surname?: string; description?: string }
+    if (!body.surname || !body.surname.trim()) {
+      return HttpResponse.json({ error: 'Surname is required' }, { status: 400 })
+    }
+    const trimmed = body.surname.trim()
+    if (trees.some(t => t.surname.toLowerCase() === trimmed.toLowerCase())) {
+      return HttpResponse.json({ error: 'Surname already exists' }, { status: 409 })
+    }
+    const newTree: TreeRow = {
+      id: crypto.randomUUID(),
+      surname: trimmed,
+      description: body.description?.trim() ?? '',
+      memberCount: 0,
+    }
+    trees.push(newTree)
+    return HttpResponse.json(newTree, { status: 201 })
+  }),
 
   // Tree node — returns person + relations array
   http.get(`${BASE}/trees/:treeId/node/:personId`, ({ params }) => {
@@ -208,6 +284,23 @@ export const handlers = [
   http.post(`${BASE}/trees/:treeId/members/:personId`, () =>
     new HttpResponse(null, { status: 201 }),
   ),
+
+  // Remove person from a single tree (membership removal — person row + other trees untouched)
+  http.delete(`${BASE}/trees/:treeId/members/:personId`, ({ params }) => {
+    const treeId = params.treeId as string
+    const personId = params.personId as string
+    if (!persons[personId]) return HttpResponse.json({ error: 'Not found' }, { status: 404 })
+    const tree = trees.find(t => t.id === treeId)
+    if (!tree) return HttpResponse.json({ error: 'Tree not found' }, { status: 404 })
+    if (tree.memberCount > 0) tree.memberCount -= 1
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // List all persons (used by MembersListDrawer). MUST be before /persons/:id.
+  http.get(`${BASE}/persons`, () => {
+    const all = Object.values(persons).sort((a, b) => a.fullName.localeCompare(b.fullName))
+    return HttpResponse.json(all)
+  }),
 
   // Search existing persons — must be BEFORE /persons/:id to avoid route shadowing
   http.get(`${BASE}/persons/search-existing`, ({ request }) => {
@@ -269,14 +362,20 @@ export const handlers = [
 
   // Create person
   http.post(`${BASE}/persons`, async ({ request }) => {
-    const body = await request.json() as Partial<Person>
+    const body = await request.json() as Partial<Person> & { treeId?: string }
     const newId = crypto.randomUUID()
+    const { treeId, ...rest } = body
+    const primaryTreeId = treeId ?? rest.primaryTreeId ?? null
     persons[newId] = {
-      id: newId, fullName: body.fullName ?? '', nameBefore: null, phone: null,
+      id: newId, fullName: rest.fullName ?? '', nameBefore: null, phone: null,
       location: null, birthMonthYear: null, deathMonthYear: null, photoBlobUrl: null,
-      primaryTreeId: null, ...body,
+      primaryTreeId, ...rest,
     }
     graph[newId] = { relations: [] }
+    if (primaryTreeId) {
+      const tree = trees.find(t => t.id === primaryTreeId)
+      if (tree) tree.memberCount += 1
+    }
     return HttpResponse.json(persons[newId], { status: 201 })
   }),
 
@@ -324,13 +423,29 @@ export const handlers = [
     new HttpResponse(null, { status: 201 }),
   ),
 
-  // Surnames — Panse focal is Arun so Meena appears as sibling
-  http.get(`${BASE}/surnames`, () =>
-    HttpResponse.json([
-      { surname: 'Sathe', treeId: SATHE, memberCount: 9, recentPerson: persons['20000000-0000-0000-0000-000000000005'] },
-      { surname: 'Panse', treeId: PANSE, memberCount: 8, recentPerson: persons['20000000-0000-0000-0000-000000000016'] },
-    ]),
-  ),
+  // Surnames — derived from the mutable `trees` registry so new ones show up
+  http.get(`${BASE}/surnames`, () => {
+    const recentByTree: Record<string, typeof persons[string] | undefined> = {
+      [SATHE]: persons['20000000-0000-0000-0000-000000000005'],
+      [PANSE]: persons['20000000-0000-0000-0000-000000000016'],
+    }
+    // For user-created trees, pick a living primary member (fall back to any
+    // primary member). Mirrors the real /surnames/:surname/recent contract.
+    function deriveRecent(treeId: string) {
+      const members = Object.values(persons).filter(p => p.primaryTreeId === treeId)
+      if (members.length === 0) return undefined
+      const living = members.filter(p => !p.deathMonthYear)
+      return living[living.length - 1] ?? members[members.length - 1]
+    }
+    return HttpResponse.json(
+      trees.map(t => ({
+        surname: t.surname,
+        treeId: t.id,
+        memberCount: t.memberCount,
+        recentPerson: recentByTree[t.id] ?? deriveRecent(t.id),
+      })),
+    )
+  }),
 
   // Surname cross-links
   http.get(`${BASE}/surnames/relationships`, () =>
@@ -358,6 +473,46 @@ export const handlers = [
 
   // Mock current user
   http.get(`${BASE}/auth/me`, () =>
-    HttpResponse.json({ id: '00000000-0000-0000-0000-000000000002', email: 'sathe.admin@familytree.dev', fullName: 'Ramesh Sathe', role: 'family_admin', assignedTrees: [SATHE] }),
+    HttpResponse.json({ id: '00000000-0000-0000-0000-000000000002', email: 'sathe.admin@familytree.dev', fullName: 'Ramesh Sathe', role: 'family_admin', assignedTrees: [SATHE], personId: '20000000-0000-0000-0000-000000000018' }),
   ),
+
+  // List family admins for a tree → person ids (frontend cross-refs with persons map)
+  http.get(`${BASE}/admin/trees/:treeId/admins`, ({ params }) => {
+    const treeId = params.treeId as string
+    const ids = Array.from(treeAdmins[treeId] ?? new Set<string>())
+    return HttpResponse.json(ids.map(personId => ({
+      personId,
+      fullName: persons[personId]?.fullName ?? 'Unknown',
+    })))
+  }),
+
+  // Assign a person as family admin for a tree
+  http.post(`${BASE}/admin/trees/:treeId/admins/:personId`, ({ params }) => {
+    const treeId = params.treeId as string
+    const personId = params.personId as string
+    if (!persons[personId]) return HttpResponse.json({ error: 'Person not found' }, { status: 404 })
+    if (!trees.some(t => t.id === treeId)) return HttpResponse.json({ error: 'Tree not found' }, { status: 404 })
+    if (!treeAdmins[treeId]) treeAdmins[treeId] = new Set()
+    treeAdmins[treeId].add(personId)
+    saveAdmins()
+    return new HttpResponse(null, { status: 201 })
+  }),
+
+  // Remove a person from family admins of a tree
+  http.delete(`${BASE}/admin/trees/:treeId/admins/:personId`, ({ params }) => {
+    const treeId = params.treeId as string
+    const personId = params.personId as string
+    treeAdmins[treeId]?.delete(personId)
+    saveAdmins()
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // Trees where the given person is a family admin — used by useAuth() to drive canEditTree
+  http.get(`${BASE}/admin/trees-by-admin/:personId`, ({ params }) => {
+    const personId = params.personId as string
+    const treeIds = Object.entries(treeAdmins)
+      .filter(([, members]) => members.has(personId))
+      .map(([treeId]) => treeId)
+    return HttpResponse.json(treeIds)
+  }),
 ]
