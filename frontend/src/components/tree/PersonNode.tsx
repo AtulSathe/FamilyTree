@@ -1,13 +1,26 @@
-import { memo, useState } from 'react'
+import { memo, useState, type KeyboardEvent } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import { Avatar } from '../common/Avatar'
 import { useTreeStore, type PersonNodeData } from '../../store/treeStore'
+import { useAuth } from '../../hooks/useAuth'
 
 export const PersonNode = memo(({ data, selected }: NodeProps) => {
   const d = data as PersonNodeData
   const navigate = useNavigate()
-  const { activeFamilyTreeId, expandNode, collapseNode, expandedPersonIds, setAddRelationTarget, setRemoveRelationTarget, setSelectedNodeId } = useTreeStore()
+  const { t } = useTranslation('tree')
+  const {
+    activeFamilyTreeId,
+    expandNode,
+    collapseNode,
+    expandedPersonIds,
+    setAddRelationTarget,
+    setRemoveRelationTarget,
+    setSelectedNodeId,
+  } = useTreeStore()
+  const { canEditTree } = useAuth()
+  const canEdit = !!activeFamilyTreeId && canEditTree(activeFamilyTreeId)
   const isExpanded = expandedPersonIds.has(d.personId)
   const [hovered, setHovered] = useState(false)
 
@@ -17,16 +30,30 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
     d.deathMonthYear ? `✝ ${d.deathMonthYear}` : null,
   ].filter(Boolean) as string[]
 
+  function openDetails() { navigate(`/person/${d.personId}`) }
+  function selectNode() { setSelectedNodeId(d.personId) }
+
+  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key === 'Enter') { e.preventDefault(); openDetails() }
+    else if (e.key === ' ') { e.preventDefault(); selectNode() }
+  }
+
   return (
     <div
-      onDoubleClick={() => navigate(`/person/${d.personId}`)}
-      onClick={() => setSelectedNodeId(d.personId)}
+      role="button"
+      tabIndex={0}
+      aria-label={t('nodeAriaLabel', { name: d.fullName })}
+      aria-pressed={selected}
+      onDoubleClick={openDetails}
+      onClick={selectNode}
+      onKeyDown={handleKeyDown}
+      onFocus={() => setHovered(true)}
+      onBlur={() => setHovered(false)}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
-      className={`relative flex flex-col items-center gap-1 cursor-pointer select-none rounded-lg p-1 transition-shadow ${
+      className={`relative flex flex-col items-center gap-1 cursor-pointer select-none rounded-lg p-1 w-[90px] outline-none focus:ring-2 focus:ring-blue-500 transition-shadow ${
         selected ? 'ring-2 ring-blue-500 ring-offset-1' : ''
       } ${d.isCenter ? 'ring-2 ring-indigo-400 ring-offset-2' : ''}`}
-      style={{ width: 90 }}
     >
       <Handle type="target" position={Position.Top} className="opacity-0" />
 
@@ -39,46 +66,53 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
       {/* Custom tooltip */}
       {hovered && tooltipLines.length > 0 && (
         <div
-          className="absolute bottom-full mb-2 left-1/2 z-50 pointer-events-none"
-          style={{ transform: 'translateX(-50%)' }}
+          className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 z-50 pointer-events-none"
+          role="tooltip"
         >
           <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-xl whitespace-nowrap">
-            {tooltipLines.map((line, i) => (
-              <div key={i}>{line}</div>
+            {tooltipLines.map(line => (
+              <div key={line}>{line}</div>
             ))}
           </div>
           <div className="w-2 h-2 bg-gray-900 rotate-45 mx-auto -mt-1" />
         </div>
       )}
 
-      {/* Action buttons visible on hover */}
+      {/* Action buttons visible on hover/focus */}
       {hovered && activeFamilyTreeId && (
         <div className="flex gap-1 mt-0.5">
           <button
+            type="button"
             onClick={e => {
               e.stopPropagation()
               if (isExpanded) collapseNode(d.personId)
               else expandNode(d.personId)
             }}
-            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center leading-none"
-            title={isExpanded ? 'Collapse relations' : 'Expand relations'}
+            className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center leading-none focus:outline-none focus:ring-2 focus:ring-blue-400"
+            aria-label={`${isExpanded ? t('collapse') : t('expand')} – ${d.fullName}`}
           >
             {isExpanded ? '−' : '+'}
           </button>
-          <button
-            onClick={e => { e.stopPropagation(); setAddRelationTarget(d.personId) }}
-            className="text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-full w-5 h-5 flex items-center justify-center leading-none"
-            title="Add relation"
-          >
-            ✚
-          </button>
-          <button
-            onClick={e => { e.stopPropagation(); setRemoveRelationTarget(d.personId) }}
-            className="text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-full w-5 h-5 flex items-center justify-center leading-none font-bold"
-            title="Remove a relation"
-          >
-            −
-          </button>
+          {canEdit && (
+            <>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setAddRelationTarget(d.personId) }}
+                className="text-xs bg-green-100 hover:bg-green-200 text-green-700 rounded-full w-5 h-5 flex items-center justify-center leading-none focus:outline-none focus:ring-2 focus:ring-green-400"
+                aria-label={`${t('addRelation')} – ${d.fullName}`}
+              >
+                ✚
+              </button>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); setRemoveRelationTarget(d.personId) }}
+                className="text-xs bg-red-100 hover:bg-red-200 text-red-700 rounded-full w-5 h-5 flex items-center justify-center leading-none font-bold focus:outline-none focus:ring-2 focus:ring-red-400"
+                aria-label={`${t('removeRelation')} – ${d.fullName}`}
+              >
+                −
+              </button>
+            </>
+          )}
         </div>
       )}
 

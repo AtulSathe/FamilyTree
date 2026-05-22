@@ -93,4 +93,26 @@ describe('treeStore expand / collapse', () => {
     await useTreeStore.getState().expandNode(FOCAL)
     expect(api.get).not.toHaveBeenCalled()
   })
+
+  it('loadFocalNode surfaces an error when the API throws', async () => {
+    vi.mocked(api.get).mockRejectedValueOnce(new Error('network'))
+    await useTreeStore.getState().loadFocalNode(TREE, FOCAL)
+    const s = useTreeStore.getState()
+    expect(s.loading).toBe(false)
+    expect(s.error?.kind).toBe('load')
+    expect(s.error?.i18nKey).toBe('errorLoadingTree')
+  })
+
+  it('expandNode surfaces an error and clearError dismisses it', async () => {
+    vi.mocked(api.get)
+      .mockResolvedValueOnce(makeResponse(FOCAL, []))
+      .mockRejectedValueOnce(new Error('network'))
+
+    await useTreeStore.getState().loadFocalNode(TREE, FOCAL)
+    await useTreeStore.getState().expandNode(FOCAL)
+    expect(useTreeStore.getState().error?.kind).toBe('expand')
+
+    useTreeStore.getState().clearError()
+    expect(useTreeStore.getState().error).toBeNull()
+  })
 })

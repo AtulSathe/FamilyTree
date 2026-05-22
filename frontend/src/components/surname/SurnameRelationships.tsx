@@ -9,17 +9,25 @@ export default function SurnameRelationships() {
 
   if (isLoading) return <p className="text-gray-400 text-sm p-4">{t('loading')}</p>
 
+  const headers: Array<{ key: string; label: string }> = [
+    { key: 'surnameA',   label: t('surnameA')   },
+    { key: 'surnameB',   label: t('surnameB')   },
+    { key: 'linkPerson', label: t('linkPerson') },
+    { key: 'hops',       label: t('hops')       },
+    { key: 'detected',   label: t('detected')   },
+  ]
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200">
       <table className="min-w-full divide-y divide-gray-200 text-sm">
         <thead className="bg-gray-50">
           <tr>
-            {['Surname A', 'Surname B', 'Link Person', 'Hops', 'Detected'].map(h => (
+            {headers.map(h => (
               <th
-                key={h}
+                key={h.key}
                 className="px-4 py-2 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
               >
-                {h}
+                {h.label}
               </th>
             ))}
           </tr>
@@ -28,12 +36,12 @@ export default function SurnameRelationships() {
           {links.length === 0 && (
             <tr>
               <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
-                No cross-tree links detected yet.
+                {t('noSurnameLinks')}
               </td>
             </tr>
           )}
-          {links.map((l, i) => (
-            <tr key={i} className="hover:bg-gray-50">
+          {links.map(l => (
+            <tr key={`${l.surnameA}-${l.surnameB}-${l.linkPerson.id}`} className="hover:bg-gray-50">
               <td className="px-4 py-2"><Badge label={l.surnameA} color="blue" /></td>
               <td className="px-4 py-2"><Badge label={l.surnameB} color="green" /></td>
               <td className="px-4 py-2">

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ReactFlow, MiniMap, Controls, Background, BackgroundVariant, Panel, type NodeMouseHandler } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
+import { useTranslation } from 'react-i18next'
 import { useTreeStore } from '../../store/treeStore'
 import { PersonNode } from './PersonNode'
 import { edgeTypes } from './EdgeTypes'
@@ -21,9 +22,13 @@ export default function TreeCanvas() {
     addRelationTarget, removeRelationTarget,
     activeFamilyTreeId, selectedNodeId,
     setSelectedNodeId, removePersonFromCanvas,
+    error, clearError,
   } = useTreeStore()
 
-  const { canEdit, isPowerAdmin } = useAuth()
+  const { canEditTree, isPowerAdmin } = useAuth()
+  const { t } = useTranslation('tree')
+  const { t: tCommon } = useTranslation('common')
+  const canEditActiveTree = !!activeFamilyTreeId && canEditTree(activeFamilyTreeId)
   const [showAddPerson, setShowAddPerson] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
@@ -45,22 +50,48 @@ export default function TreeCanvas() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center text-gray-400">
-        <span className="text-sm">Loading tree…</span>
+        <span className="text-sm">{t('loadingTree')}</span>
       </div>
     )
   }
 
   if (nodes.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center flex-col gap-3 text-gray-400">
+      <div className="relative flex h-full items-center justify-center flex-col gap-3 text-gray-400">
         <span className="text-5xl">🌳</span>
-        <p className="text-sm">Select a surname from the left pane to view the family tree.</p>
+        <p className="text-sm">{error ? t(error.i18nKey) : t('noTreeSelectedLong')}</p>
+        {error && (
+          <button
+            type="button"
+            onClick={clearError}
+            className="text-xs text-blue-600 hover:underline"
+          >
+            {tCommon('retry')}
+          </button>
+        )}
       </div>
     )
   }
 
   return (
     <>
+      {error && (
+        <div
+          role="alert"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-40 bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg shadow px-4 py-2 flex items-center gap-3"
+        >
+          <span>{t(error.i18nKey)}</span>
+          <button
+            type="button"
+            onClick={clearError}
+            className="text-red-500 hover:text-red-700 font-bold text-base leading-none"
+            aria-label={tCommon('close')}
+          >
+            ×
+          </button>
+        </div>
+      )}
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -80,26 +111,30 @@ export default function TreeCanvas() {
         <Controls />
 
         {/* Floating action panel */}
-        {canEdit && (
+        {canEditActiveTree && (
           <Panel position="top-right">
             <div className="flex flex-col gap-2 bg-white rounded-xl shadow-lg border border-gray-200 p-2">
               <button
+                type="button"
                 onClick={() => setShowAddPerson(true)}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-green-50 hover:bg-green-100 text-green-700 text-sm font-medium transition-colors"
-                title="Add a new person to this tree"
+                title={t('addPersonTooltip')}
               >
-                <span className="text-base leading-none">＋</span> Add Person
+                <span className="text-base leading-none">＋</span> {t('addPerson')}
               </button>
 
               {isPowerAdmin && (
                 <button
+                  type="button"
                   onClick={() => selectedNodeId && setShowDeleteConfirm(true)}
                   disabled={!selectedNodeId}
                   className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  title={selectedNodeId ? `Delete ${selectedName}` : 'Click a node first'}
+                  title={selectedNodeId ? `${tCommon('delete')} ${selectedName}` : t('deleteSelectFirst')}
                 >
                   <span className="text-base leading-none">🗑</span>
-                  {selectedNodeId ? `Delete ${selectedName}` : 'Delete (select node)'}
+                  {selectedNodeId
+                    ? `${tCommon('delete')} ${selectedName}`
+                    : t('deleteSelectNode')}
                 </button>
               )}
             </div>
@@ -119,7 +154,7 @@ export default function TreeCanvas() {
 
       {/* Add person (standalone) modal */}
       {showAddPerson && activeFamilyTreeId && (
-        <Modal open title="Add New Person" onClose={() => setShowAddPerson(false)}>
+        <Modal open title={t('addNewPerson')} onClose={() => setShowAddPerson(false)}>
           <PersonForm
             defaultTreeId={activeFamilyTreeId}
             hideTrees
@@ -131,19 +166,19 @@ export default function TreeCanvas() {
 
       {/* Delete person confirmation modal */}
       {showDeleteConfirm && selectedNodeId && (
-        <Modal open title="Delete Person" onClose={() => setShowDeleteConfirm(false)}>
+        <Modal open title={t('deletePerson')} onClose={() => setShowDeleteConfirm(false)}>
           <div className="space-y-4">
             <p className="text-sm text-gray-700">
-              Permanently delete <span className="font-semibold">{selectedName}</span>? This removes the person from all trees and cannot be undone.
+              {t('deletePersonPrompt', { name: selectedName })}
             </p>
             <div className="flex justify-end gap-2">
-              <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>Cancel</Button>
+              <Button variant="secondary" onClick={() => setShowDeleteConfirm(false)}>{tCommon('cancel')}</Button>
               <Button
                 variant="danger"
                 loading={deleteMutation.isPending}
                 onClick={handleDeleteConfirm}
               >
-                Delete
+                {tCommon('delete')}
               </Button>
             </div>
           </div>

@@ -173,6 +173,14 @@ interface ExpansionDiff {
   edgeIds: string[]
 }
 
+export type TreeErrorKind = 'load' | 'expand'
+
+export interface TreeError {
+  kind: TreeErrorKind
+  /** i18n key (in the `tree` namespace) describing the error */
+  i18nKey: string
+}
+
 interface TreeStore {
   activeFamilyTreeId: string | null
   nodes: Node<PersonNodeData>[]
@@ -183,12 +191,14 @@ interface TreeStore {
   selectedNodeId: string | null
   expandedPersonIds: Set<string>
   expansionDiffs: Record<string, ExpansionDiff>
+  error: TreeError | null
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
   loadFocalNode: (treeId: string, personId: string) => Promise<void>
   expandNode: (personId: string, levels?: number) => Promise<void>
   collapseNode: (personId: string) => void
   clearTree: () => void
+  clearError: () => void
   setAddRelationTarget: (personId: string | null) => void
   setRemoveRelationTarget: (personId: string | null) => void
   setSelectedNodeId: (id: string | null) => void
@@ -206,6 +216,7 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
   selectedNodeId: null,
   expandedPersonIds: new Set(),
   expansionDiffs: {},
+  error: null,
 
   onNodesChange: changes =>
     set(s => ({ nodes: applyNodeChanges(changes, s.nodes) as Node<PersonNodeData>[] })),
@@ -221,13 +232,18 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
       edges: [],
       expandedPersonIds: new Set(),
       expansionDiffs: {},
+      error: null,
     })
     try {
       const { data } = await api.get<TreeNode>(`/trees/${treeId}/node/${personId}?levels=1`)
       const { newNodes, newEdges } = buildLayout(data, 400, 300, new Set())
       set({ nodes: newNodes, edges: newEdges, loading: false })
-    } catch {
-      set({ loading: false })
+    } catch (err) {
+      console.error('loadFocalNode failed', err)
+      set({
+        loading: false,
+        error: { kind: 'load', i18nKey: 'errorLoadingTree' },
+      })
     }
   },
 
@@ -263,8 +279,9 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
           },
         }
       })
-    } catch {
-      // silently ignore expand errors
+    } catch (err) {
+      console.error('expandNode failed', err)
+      set({ error: { kind: 'expand', i18nKey: 'errorExpandingNode' } })
     }
   },
 
@@ -306,7 +323,10 @@ export const useTreeStore = create<TreeStore>((set, get) => ({
     selectedNodeId: null,
     expandedPersonIds: new Set(),
     expansionDiffs: {},
+    error: null,
   }),
+
+  clearError: () => set({ error: null }),
 
   setAddRelationTarget: (personId) => set({ addRelationTarget: personId }),
 

@@ -99,7 +99,7 @@ export default function PersonForm({ person, defaultTreeId, hideTrees, onSuccess
         <Field label={t('birthMonthYear')}>
           <input
             className={inputCls}
-            placeholder="Jan 1952"
+            placeholder={t('birthPlaceholder')}
             value={form.birthMonthYear}
             onChange={e => set('birthMonthYear', e.target.value)}
           />
@@ -107,7 +107,7 @@ export default function PersonForm({ person, defaultTreeId, hideTrees, onSuccess
         <Field label={t('deathMonthYear')}>
           <input
             className={inputCls}
-            placeholder="Jun 2010"
+            placeholder={t('deathPlaceholder')}
             value={form.deathMonthYear}
             onChange={e => set('deathMonthYear', e.target.value)}
           />
@@ -138,7 +138,7 @@ export default function PersonForm({ person, defaultTreeId, hideTrees, onSuccess
             onChange={e => set('treeId', e.target.value)}
             required
           >
-            <option value="">— select —</option>
+            <option value="">{t('selectTreeOption')}</option>
             {trees.map(tr => (
               <option key={tr.id} value={tr.id}>{tr.surname}</option>
             ))}

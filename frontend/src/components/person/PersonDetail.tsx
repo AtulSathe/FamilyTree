@@ -6,6 +6,7 @@ import { Avatar } from '../common/Avatar'
 import { Button } from '../common/Button'
 import { useAuth } from '../../hooks/useAuth'
 import { useUpdatePerson, useRequestPhotoUploadUrl } from '../../api/persons'
+import { useTreeStore } from '../../store/treeStore'
 
 const CDN_BASE = import.meta.env.VITE_BLOB_CDN_BASE ?? ''
 const PHOTOS_CONTAINER = 'person-photos'
@@ -30,12 +31,24 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
     if (canEdit && !uploading) fileInputRef.current?.click()
   }
 
+  function handleBackToTree() {
+    const treeId = detail.primaryTreeId
+    if (treeId) {
+      const store = useTreeStore.getState()
+      const inCanvas =
+        store.activeFamilyTreeId === treeId &&
+        store.nodes.some(n => n.id === detail.id)
+      if (!inCanvas) store.loadFocalNode(treeId, detail.id)
+    }
+    navigate('/')
+  }
+
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     // reset so the same file can be re-selected even on early-return paths
     e.target.value = ''
     if (!file) return
-    if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5 MB'); return }
+    if (file.size > 5 * 1024 * 1024) { alert(t('photoTooLarge')); return }
 
     try {
       const { sasUrl, blobName } = await requestUploadUrl.mutateAsync()
@@ -52,7 +65,7 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
       await updatePerson.mutateAsync({ photoBlobUrl: cdnUrl })
     } catch (err) {
       console.error('Photo upload failed', err)
-      alert('Photo upload failed. Please try again.')
+      alert(t('photoUploadFailed'))
     }
   }
 
@@ -67,7 +80,8 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
               onClick={handlePhotoClick}
               disabled={uploading}
               className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-wait"
-              title="Change photo"
+              title={t('photoTitleChange')}
+              aria-label={t('photoTitleChange')}
             >
               {uploading ? (
                 <span className="text-white text-xs">…</span>
@@ -100,7 +114,7 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
 
         <div className="flex gap-2 shrink-0">
           {canEdit && <Button onClick={onEdit}>{t('edit')}</Button>}
-          <Button variant="secondary" onClick={() => navigate(-1)}>{t('backToTree')}</Button>
+          <Button variant="secondary" onClick={handleBackToTree}>{t('backToTree')}</Button>
         </div>
       </div>
 
