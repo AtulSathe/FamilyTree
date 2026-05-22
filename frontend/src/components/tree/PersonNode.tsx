@@ -7,7 +7,8 @@ import { useTreeStore, type PersonNodeData } from '../../store/treeStore'
 export const PersonNode = memo(({ data, selected }: NodeProps) => {
   const d = data as PersonNodeData
   const navigate = useNavigate()
-  const { activeFamilyTreeId, expandNode, setAddRelationTarget, setRemoveRelationTarget, setSelectedNodeId } = useTreeStore()
+  const { activeFamilyTreeId, expandNode, collapseNode, expandedPersonIds, setAddRelationTarget, setRemoveRelationTarget, setSelectedNodeId } = useTreeStore()
+  const isExpanded = expandedPersonIds.has(d.personId)
   const [hovered, setHovered] = useState(false)
 
   const tooltipLines = [
@@ -54,11 +55,15 @@ export const PersonNode = memo(({ data, selected }: NodeProps) => {
       {hovered && activeFamilyTreeId && (
         <div className="flex gap-1 mt-0.5">
           <button
-            onClick={e => { e.stopPropagation(); expandNode(activeFamilyTreeId, d.personId) }}
+            onClick={e => {
+              e.stopPropagation()
+              if (isExpanded) collapseNode(d.personId)
+              else expandNode(d.personId)
+            }}
             className="text-xs bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-full w-5 h-5 flex items-center justify-center leading-none"
-            title="Expand relations"
+            title={isExpanded ? 'Collapse relations' : 'Expand relations'}
           >
-            +
+            {isExpanded ? '−' : '+'}
           </button>
           <button
             onClick={e => { e.stopPropagation(); setAddRelationTarget(d.personId) }}

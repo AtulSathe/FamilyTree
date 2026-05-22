@@ -1,6 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from './client'
-import type { Person, PersonDetail, CreatePersonPayload, UpdatePersonPayload } from '../types/person'
+import type {
+  Person,
+  PersonDetail,
+  CreatePersonPayload,
+  UpdatePersonPayload,
+  PhotoUploadUrlResponse,
+} from '../types/person'
 
 export const usePerson = (id: string) =>
   useQuery({
@@ -44,6 +50,12 @@ export const useDeletePerson = (id: string) => {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['persons'] }),
   })
 }
+
+export const useRequestPhotoUploadUrl = (id: string) =>
+  useMutation({
+    mutationFn: () =>
+      api.post<PhotoUploadUrlResponse>(`/persons/${id}/photo-upload-url`).then(r => r.data),
+  })
 
 export const useSearchExisting = (q: string) =>
   useQuery({

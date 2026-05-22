@@ -8,7 +8,14 @@ import { useTreeStore } from '../../store/treeStore'
 import type { Person } from '../../types/person'
 import type { CreateRelationshipPayload } from '../../types/tree'
 
-type RelType = 'parent' | 'child' | 'spouse' | 'sibling'
+export type RelType =
+  | 'parent'
+  | 'child'
+  | 'spouse'
+  | 'sibling'
+  | 'in_law'
+  | 'step_parent'
+  | 'adoptive'
 type Tab = 'create' | 'link'
 
 interface Props {
@@ -16,7 +23,7 @@ interface Props {
   treeId: string
 }
 
-function buildPayload(
+export function buildPayload(
   relType: RelType,
   focalPersonId: string,
   otherPersonId: string,
@@ -30,6 +37,12 @@ function buildPayload(
       return { personAId: focalPersonId, personBId: otherPersonId, relationshipType: 'spouse' }
     case 'sibling':
       return { personAId: focalPersonId, personBId: otherPersonId, relationshipType: 'sibling_of' }
+    case 'in_law':
+      return { personAId: focalPersonId, personBId: otherPersonId, relationshipType: 'in_law_of' }
+    case 'step_parent':
+      return { personAId: otherPersonId, personBId: focalPersonId, relationshipType: 'step_parent_of' }
+    case 'adoptive':
+      return { personAId: otherPersonId, personBId: focalPersonId, relationshipType: 'adoptive_parent_of' }
   }
 }
 
@@ -50,7 +63,7 @@ export default function AddRelationModal({ focalPersonId, treeId }: Props) {
     if (!created) return
     try {
       await addRelationship.mutateAsync(buildPayload(relType, focalPersonId, created.id))
-      await expandNode(treeId, focalPersonId)
+      await expandNode(focalPersonId)
       close()
     } catch {
       // error handled by mutation state
@@ -62,7 +75,7 @@ export default function AddRelationModal({ focalPersonId, treeId }: Props) {
     setLinkError('')
     try {
       await addRelationship.mutateAsync(buildPayload(relType, focalPersonId, selectedPerson.id))
-      await expandNode(treeId, focalPersonId)
+      await expandNode(focalPersonId)
       close()
     } catch {
       setLinkError('Failed to add relationship')
@@ -74,6 +87,9 @@ export default function AddRelationModal({ focalPersonId, treeId }: Props) {
     child: 'Child (focal person is parent)',
     spouse: 'Spouse',
     sibling: 'Sibling',
+    in_law: 'In-Law',
+    step_parent: 'Step-Parent (they are step-parent of focal person)',
+    adoptive: 'Adoptive Parent (they are adoptive parent of focal person)',
   }
 
   return (

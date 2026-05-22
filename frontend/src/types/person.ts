@@ -45,3 +45,8 @@ export interface UpdatePersonPayload {
   deathMonthYear?: string | null
   photoBlobUrl?: string | null
 }
+
+export interface PhotoUploadUrlResponse {
+  sasUrl: string
+  blobName: string
+}

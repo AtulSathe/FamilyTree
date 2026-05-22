@@ -5,7 +5,10 @@ import type { PersonDetail as PersonDetailType } from '../../types/person'
 import { Avatar } from '../common/Avatar'
 import { Button } from '../common/Button'
 import { useAuth } from '../../hooks/useAuth'
-import { useUpdatePerson } from '../../api/persons'
+import { useUpdatePerson, useRequestPhotoUploadUrl } from '../../api/persons'
+
+const CDN_BASE = import.meta.env.VITE_BLOB_CDN_BASE ?? ''
+const PHOTOS_CONTAINER = 'person-photos'
 
 interface PersonDetailProps {
   detail: PersonDetailType
@@ -18,25 +21,39 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
   const { canEditTree } = useAuth()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const updatePerson = useUpdatePerson(detail.id)
+  const requestUploadUrl = useRequestPhotoUploadUrl(detail.id)
 
   const canEdit = canEditTree(detail.primaryTreeId ?? '')
+  const uploading = requestUploadUrl.isPending || updatePerson.isPending
 
   function handlePhotoClick() {
-    if (canEdit) fileInputRef.current?.click()
+    if (canEdit && !uploading) fileInputRef.current?.click()
   }
 
-  function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
+  async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
+    // reset so the same file can be re-selected even on early-return paths
+    e.target.value = ''
     if (!file) return
     if (file.size > 5 * 1024 * 1024) { alert('Photo must be under 5 MB'); return }
-    const reader = new FileReader()
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      updatePerson.mutate({ photoBlobUrl: dataUrl })
+
+    try {
+      const { sasUrl, blobName } = await requestUploadUrl.mutateAsync()
+      const putRes = await fetch(sasUrl, {
+        method: 'PUT',
+        headers: {
+          'x-ms-blob-type': 'BlockBlob',
+          'Content-Type': file.type || 'application/octet-stream',
+        },
+        body: file,
+      })
+      if (!putRes.ok) throw new Error(`Blob upload failed: ${putRes.status}`)
+      const cdnUrl = `${CDN_BASE}/${PHOTOS_CONTAINER}/${blobName}`
+      await updatePerson.mutateAsync({ photoBlobUrl: cdnUrl })
+    } catch (err) {
+      console.error('Photo upload failed', err)
+      alert('Photo upload failed. Please try again.')
     }
-    reader.readAsDataURL(file)
-    // reset so the same file can be re-selected
-    e.target.value = ''
   }
 
   return (
@@ -48,11 +65,11 @@ export default function PersonDetail({ detail, onEdit }: PersonDetailProps) {
           {canEdit && (
             <button
               onClick={handlePhotoClick}
-              disabled={updatePerson.isPending}
+              disabled={uploading}
               className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-wait"
               title="Change photo"
             >
-              {updatePerson.isPending ? (
+              {uploading ? (
                 <span className="text-white text-xs">…</span>
               ) : (
                 <span className="text-white text-lg">📷</span>

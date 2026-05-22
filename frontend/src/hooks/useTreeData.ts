@@ -9,8 +9,8 @@ export function useTreeData() {
     store.loadFocalNode(treeId, personId)
   }
 
-  function expand(treeId: string, personId: string) {
-    if (store.activeFamilyTreeId) store.expandNode(treeId, personId)
+  function expand(personId: string, levels?: number) {
+    if (store.activeFamilyTreeId) store.expandNode(personId, levels)
   }
 
   return { surnames, openTree, expand, ...store }

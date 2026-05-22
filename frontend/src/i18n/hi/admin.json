@@ -1,1 +1,1 @@
-{ "auditLog": "ऑडिट लॉग", "users": "उपयोगकर्ता", "role": "भूमिका", "roles": { "power_admin": "पावर एडमिन", "family_admin": "परिवार एडमिन", "community_member": "सदस्य" } }
+{ "auditLog": "ऑडिट लॉग", "users": "उपयोगकर्ता", "role": "भूमिका", "roles": { "power_admin": "पावर एडमिन", "family_admin": "परिवार एडमिन", "community_member": "सदस्य" }, "changeRole": "भूमिका बदलें", "deleteUser": "उपयोगकर्ता हटाएं", "action": "कार्रवाई", "entity": "इकाई", "changedAt": "परिवर्तन समय", "oldValue": "पुराना मान", "newValue": "नया मान" }

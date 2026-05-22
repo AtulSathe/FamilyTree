@@ -183,7 +183,8 @@ export const handlers = [
     const linkedA = graph[personAId].relations.some(r => r.personId === personBId)
     const linkedB = graph[personBId].relations.some(r => r.personId === personAId)
 
-    if (relationshipType === 'parent_of') {
+    const DIRECTIONAL = new Set(['parent_of', 'child_of', 'step_parent_of', 'adoptive_parent_of'])
+    if (DIRECTIONAL.has(relationshipType)) {
       if (!linkedA) graph[personAId].relations.push(rel(personBId, relationshipType, 'out'))
       if (!linkedB) graph[personBId].relations.push(rel(personAId, relationshipType, 'in'))
     } else {
@@ -317,6 +318,11 @@ export const handlers = [
       blobName,
     })
   }),
+
+  // Intercept the SAS PUT itself so the upload flow completes in mock mode
+  http.put('http://127.0.0.1:10000/devstoreaccount1/person-photos/:blobName', () =>
+    new HttpResponse(null, { status: 201 }),
+  ),
 
   // Surnames — Panse focal is Arun so Meena appears as sibling
   http.get(`${BASE}/surnames`, () =>
