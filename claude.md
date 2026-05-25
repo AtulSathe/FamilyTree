@@ -571,6 +571,32 @@ VITE_B2C_REDIRECT_URI=https://familytree.example.com
 
 ---
 
+## Claude Code working conventions for this repo
+
+These conventions reduce token usage and avoid common inefficiencies observed in past sessions. Follow them by default unless the user explicitly overrides.
+
+- **Batch independent operations.** Multiple Reads, Greps, or shell checks with no data dependency must be issued in a single message with parallel tool calls — never as separate sequential turns.
+
+- **Prefer dedicated tools over Bash.** Use Glob for listing files, Read for viewing file contents, Grep for searching, Edit for modifications. Reserve Bash/PowerShell for actual shell operations (git, dotnet, npm, docker). Specifically: never use `cat`, `ls`, `find`, `grep`, or `sed` via Bash when the dedicated tool fits.
+
+- **Don't re-read files already in context.** After a Read or Edit in this session, treat the file's current content as still loaded. Only re-read if the user mentions an external change or you have specific reason to believe the file changed.
+
+- **Filter build/test output by default.**
+  - Backend tests: `dotnet test --logger "console;verbosity=minimal"`
+  - Frontend tests: `vitest run --reporter=dot`
+  - Frontend build: `npm run build` — on success report a single line (file count or "OK"); on failure show only error lines (pipe through `Select-String -Pattern "error|Failed|FAIL"`).
+  - Never use `--verbosity detailed` or unfiltered build dumps.
+
+- **Edit before Write.** If the file exists and the change is partial, use Edit (or Edit with `replace_all`) rather than rewriting the whole file. Batch multiple Edits to the same file in a single message.
+
+- **Delegate multi-file investigations.** If a request will require reading more than 3 files or running more than 5 search/grep calls to answer, spawn an Agent (Explore for searches, general-purpose for research). Ask the agent to return a summary under 300 words with file:line citations — do not dump full file contents back into the parent thread.
+
+- **Use available skills.** Prefer `/run` to launch the app, `/verify` to confirm a change works, `/code-review` or `/review` for code reviews, `/security-review` for pre-commit security checks. Do not hand-roll equivalents (manual `npm run dev &` + polling loops, multi-agent code-review orchestration, etc.).
+
+- **Shell hygiene (Windows).** Never prepend `cd <dir> &&` to a shell command — `cd` does not persist across calls. Use absolute paths instead. Do not append `2>&1 | tail -N` to commands; the harness already truncates output. Pick one shell (PowerShell preferred on this repo) and stick with it within a single task.
+
+---
+
 ## Local development & mock data
 
 > This section is **mandatory reading** before running any code locally.
